@@ -1,16 +1,14 @@
-```python
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from openpyxl import load_workbook
-from pathlib import Path
+
 from datetime import datetime, date
 import os
 import hmac
 import hashlib
 import base64
 import json
-import tempfile
+import requests
 
 
 # =========================================================
@@ -19,47 +17,43 @@ import tempfile
 
 app = FastAPI(title="Rahul Software API")
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
 )
+
 
 security = HTTPBearer(auto_error=False)
 
-BASE_DIR = Path(__file__).resolve().parent
-EXCEL_FILE = BASE_DIR / "2026-27.xlsm"
+
+# =========================================================
+# ENVIRONMENT VARIABLES
+# =========================================================
 
 USERNAME = os.getenv("RAHUL_USERNAME", "rahul")
 PASSWORD = os.getenv("RAHUL_PASSWORD", "rahul123")
 SECRET = os.getenv("RAHUL_SECRET", "change-this-secret")
 
-# Excel sync ke liye alag secret
-SYNC_SECRET = os.getenv(
-    "RAHUL_SYNC_SECRET",
-    "change-this-sync-secret"
-)
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+TABLE = "excel_rows"
 
 
 # =========================================================
-# HELPERS
+# BASIC HELPERS
 # =========================================================
 
-def get_workbook():
+def text(value):
 
-    if not EXCEL_FILE.exists():
-        raise FileNotFoundError(
-            f"Excel file not found: {EXCEL_FILE}"
-        )
+    if value is None:
+        return ""
 
-    return load_workbook(
-        EXCEL_FILE,
-        read_only=True,
-        data_only=True,
-        keep_vba=True
-    )
+    return str(value).strip()
 
 
 def clean_value(value):
@@ -73,11 +67,94 @@ def clean_value(value):
     return value
 
 
+def number(value):
+
+    try:
+
+        if value is None or value == "":
+            return 0
+
+        return float(
+            str(value)
+            .replace(",", "")
+            .strip()
+        )
+
+    except Exception:
+
+        return 0
+
+
+def clean_number(value):
+
+    value = float(value)
+
+    if value.is_integer():
+        return int(value)
+
+    return round(value, 2)
+
+
+def date_only(value):
+
+    if value is None:
+        return None
+
+    if isinstance(value, datetime):
+        return value.date()
+
+    if isinstance(value, date):
+        return value
+
+    value = str(value).strip()
+
+    formats = (
+        "%Y-%m-%d",
+        "%d-%m-%Y",
+        "%d/%m/%Y",
+        "%m/%d/%Y",
+    )
+
+    for fmt in formats:
+
+        try:
+
+            return datetime.strptime(
+                value,
+                fmt
+            ).date()
+
+        except Exception:
+            pass
+
+    return None
+
+
+def first_existing(record, names):
+
+    for name in names:
+
+        if name in record:
+
+            return record[name]
+
+    return None
+
+
+# =========================================================
+# TOKEN AUTHENTICATION
+# =========================================================
+
 def make_token(username):
 
     payload = {
+
         "username": username,
-        "exp": int(datetime.now().timestamp()) + 86400
+
+        "exp": int(
+            datetime.now().timestamp()
+        ) + 86400
+
     }
 
     raw = json.dumps(
@@ -134,6 +211,7 @@ def verify_token(token):
         return True
 
     except Exception:
+
         return False
 
 
@@ -142,12 +220,14 @@ def require_auth(
 ):
 
     if credentials is None:
+
         raise HTTPException(
             status_code=401,
             detail="Authentication required"
         )
 
     if credentials.scheme.lower() != "bearer":
+
         raise HTTPException(
             status_code=401,
             detail="Invalid authentication"
@@ -156,6 +236,7 @@ def require_auth(
     if not verify_token(
         credentials.credentials
     ):
+
         raise HTTPException(
             status_code=401,
             detail="Invalid or expired token"
@@ -164,141 +245,136 @@ def require_auth(
     return True
 
 
-def make_headers(headers):
+# =========================================================
+# SUPABASE
+# =========================================================
 
-    result = []
+def supabase_headers():
 
-    for i, header in enumerate(headers):
+    if not SUPABASE_URL or not SUPABASE_KEY:
 
-        name = (
-            str(header).strip()
-            if header is not None
-            else ""
+        raise HTTPException(
+            status_code=500,
+            detail="Supabase environment variables missing"
         )
 
-        if not name:
-            name = f"Column {i + 1}"
+    return {
 
-        original = name
-        counter = 2
+        "apikey": SUPABASE_KEY,
 
-        while name in result:
+        "Authorization":
+            f"Bearer {SUPABASE_KEY}",
 
-            name = f"{original} ({counter})"
-            counter += 1
+        "Content-Type":
+            "application/json"
 
-        result.append(name)
-
-    return result
+    }
 
 
-def rows_from_sheet(ws):
+def get_all_rows():
 
-    rows = ws.iter_rows(values_only=True)
+    url = (
+        f"{SUPABASE_URL}"
+        f"/rest/v1/{TABLE}"
+    )
 
-    try:
-        raw_headers = next(rows)
+    headers = supabase_headers()
 
-    except StopIteration:
-        return [], []
+    all_rows = []
 
-    headers = make_headers(raw_headers)
+    offset = 0
 
-    data = []
+    page_size = 1000
 
-    for row in rows:
+    while True:
 
-        if not any(
-            value is not None
-            for value in row
-        ):
-            continue
+        response = requests.get(
 
-        record = {}
+            url,
 
-        for i, header in enumerate(headers):
+            headers=headers,
 
-            value = (
-                row[i]
-                if i < len(row)
-                else None
-            )
+            params={
+                "select": "*",
+                "offset": offset,
+                "limit": page_size
+            },
 
-            record[header] = clean_value(
-                value
-            )
+            timeout=60
 
-        data.append(record)
-
-    return headers, data
-
-
-def number(value):
-
-    try:
-
-        if value is None or value == "":
-            return 0
-
-        return float(
-            str(value)
-            .replace(",", "")
-            .strip()
         )
 
-    except Exception:
-        return 0
+        if not response.ok:
+
+            raise HTTPException(
+
+                status_code=500,
+
+                detail=(
+                    "Supabase read error: "
+                    + response.text
+                )
+
+            )
+
+        rows = response.json()
+
+        if not rows:
+            break
+
+        all_rows.extend(rows)
+
+        if len(rows) < page_size:
+            break
+
+        offset += page_size
+
+    return all_rows
 
 
-def date_only(value):
+# =========================================================
+# DATABASE ROW CONVERSION
+# =========================================================
 
-    if value is None:
-        return None
+def convert_database_row(item):
 
-    if isinstance(value, datetime):
-        return value.date()
+    sheet_name = item.get(
+        "sheet",
+        ""
+    )
 
-    if isinstance(value, date):
-        return value
+    headers = item.get(
+        "headers",
+        []
+    )
 
-    text = str(value).strip()
+    row = item.get(
+        "row",
+        []
+    )
 
-    for fmt in (
-        "%Y-%m-%d",
-        "%d-%m-%Y",
-        "%d/%m/%Y",
-        "%m/%d/%Y",
-    ):
+    if not isinstance(headers, list):
+        headers = []
 
-        try:
+    if not isinstance(row, list):
+        row = []
 
-            return datetime.strptime(
-                text,
-                fmt
-            ).date()
+    return {
 
-        except Exception:
-            pass
+        "sheet": sheet_name,
 
-    return None
+        "headers": headers,
 
+        "row": row,
 
-def text(value):
+        "data": {
+            str(headers[i]):
+                row[i] if i < len(row) else None
 
-    if value is None:
-        return ""
+            for i in range(len(headers))
+        }
 
-    return str(value).strip()
-
-
-def first_existing(record, names):
-
-    for name in names:
-
-        if name in record:
-            return record[name]
-
-    return None
+    }
 
 
 # =========================================================
@@ -309,8 +385,15 @@ def first_existing(record, names):
 def home():
 
     return {
+
         "status": "online",
-        "message": "Rahul Software API is running"
+
+        "message":
+            "Rahul Software API is running",
+
+        "database":
+            "Supabase"
+
     }
 
 
@@ -346,131 +429,25 @@ def login(data: dict):
         )
 
         return {
+
             "status": "success",
+
             "access_token": token,
+
             "token": token,
+
             "token_type": "bearer"
+
         }
 
     raise HTTPException(
+
         status_code=401,
-        detail="Invalid username or password"
+
+        detail=
+            "Invalid username or password"
+
     )
-
-
-# =========================================================
-# EXCEL SYNC FROM OFFICE PC
-# =========================================================
-
-@app.post("/sync-excel")
-async def sync_excel(
-    file: UploadFile = File(...)
-):
-
-    sync_key = file.headers.get(
-        "x-sync-secret"
-    )
-
-    if (
-        not sync_key
-        or not hmac.compare_digest(
-            sync_key,
-            SYNC_SECRET
-        )
-    ):
-
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid sync secret"
-        )
-
-    if not file.filename:
-        raise HTTPException(
-            status_code=400,
-            detail="No file received"
-        )
-
-    if not file.filename.lower().endswith(
-        ".xlsm"
-    ):
-
-        raise HTTPException(
-            status_code=400,
-            detail="Only .xlsm file is allowed"
-        )
-
-    temp_file = None
-
-    try:
-
-        # Temporary file
-        with tempfile.NamedTemporaryFile(
-            delete=False,
-            suffix=".xlsm",
-            dir=BASE_DIR
-        ) as temp:
-
-            temp_file = Path(
-                temp.name
-            )
-
-            while True:
-
-                chunk = await file.read(
-                    1024 * 1024
-                )
-
-                if not chunk:
-                    break
-
-                temp.write(chunk)
-
-        # Workbook test
-        test_wb = load_workbook(
-            temp_file,
-            read_only=True,
-            data_only=True,
-            keep_vba=True
-        )
-
-        sheet_count = len(
-            test_wb.sheetnames
-        )
-
-        test_wb.close()
-
-        # Replace old Excel safely
-        os.replace(
-            str(temp_file),
-            str(EXCEL_FILE)
-        )
-
-        temp_file = None
-
-        return {
-            "status": "success",
-            "message": "Excel updated successfully",
-            "filename": file.filename,
-            "sheets": sheet_count,
-            "last_updated": datetime.now().astimezone().isoformat()
-        }
-
-    except Exception as e:
-
-        if (
-            temp_file
-            and temp_file.exists()
-        ):
-
-            try:
-                temp_file.unlink()
-            except Exception:
-                pass
-
-        raise HTTPException(
-            status_code=500,
-            detail=f"Excel sync failed: {str(e)}"
-        )
 
 
 # =========================================================
@@ -486,22 +463,40 @@ def sheets(
 
     try:
 
-        wb = get_workbook()
+        rows = get_all_rows()
 
-        names = wb.sheetnames
+        names = set()
 
-        wb.close()
+        for item in rows:
+
+            sheet_name = text(
+                item.get("sheet")
+            )
+
+            if sheet_name:
+                names.add(sheet_name)
+
+        names = sorted(names)
 
         return {
+
             "count": len(names),
+
             "sheets": names
+
         }
+
+    except HTTPException:
+        raise
 
     except Exception as e:
 
         raise HTTPException(
+
             status_code=500,
+
             detail=str(e)
+
         )
 
 
@@ -511,46 +506,78 @@ def sheets(
 
 @app.get("/sheet/{sheet_name}")
 def get_sheet(
+
     sheet_name: str,
+
     limit: int = 100,
+
     authenticated: bool = Depends(
         require_auth
     )
+
 ):
 
     try:
 
-        wb = get_workbook()
+        rows = get_all_rows()
 
-        if sheet_name not in wb.sheetnames:
+        results = []
 
-            wb.close()
+        headers = []
+
+        for item in rows:
+
+            if text(
+                item.get("sheet")
+            ) != sheet_name:
+
+                continue
+
+            converted = convert_database_row(
+                item
+            )
+
+            if not headers:
+
+                headers = converted[
+                    "headers"
+                ]
+
+            results.append(
+                converted["data"]
+            )
+
+        if not results and not headers:
 
             raise HTTPException(
+
                 status_code=404,
-                detail=f"Sheet '{sheet_name}' not found"
+
+                detail=
+                    f"Sheet '{sheet_name}' not found"
+
             )
 
-        ws = wb[sheet_name]
-
-        headers, data = rows_from_sheet(
-            ws
+        limit = max(
+            1,
+            min(
+                int(limit),
+                1000
+            )
         )
 
-        wb.close()
-
-        data = data[
-            :max(
-                1,
-                min(limit, 1000)
-            )
-        ]
+        results = results[:limit]
 
         return {
+
             "sheet": sheet_name,
+
             "headers": headers,
-            "count": len(data),
-            "data": data
+
+            "count": len(results),
+
+            "data": results
+
         }
 
     except HTTPException:
@@ -559,8 +586,11 @@ def get_sheet(
     except Exception as e:
 
         raise HTTPException(
+
             status_code=500,
+
             detail=str(e)
+
         )
 
 
@@ -570,82 +600,113 @@ def get_sheet(
 
 @app.get("/search")
 def search(
+
     q: str,
+
     sheet: str = "ALL SHEETS",
+
     authenticated: bool = Depends(
         require_auth
     )
+
 ):
 
     try:
 
-        wb = get_workbook()
-
-        search_text = q.strip().lower()
+        search_text = text(q).lower()
 
         if not search_text:
 
-            wb.close()
-
             return {
+
                 "query": q,
+
                 "sheet": sheet,
+
                 "count": 0,
+
                 "results": []
+
             }
+
+        rows = get_all_rows()
 
         results = []
 
-        for sheet_name in wb.sheetnames:
+        for item in rows:
+
+            sheet_name = text(
+                item.get("sheet")
+            )
 
             if (
                 sheet != "ALL SHEETS"
                 and sheet_name != sheet
             ):
+
                 continue
 
-            ws = wb[sheet_name]
-
-            headers, data = rows_from_sheet(
-                ws
+            converted = convert_database_row(
+                item
             )
 
-            for record in data:
+            record = converted[
+                "data"
+            ]
 
-                found = any(
+            found = False
+
+            for value in record.values():
+
+                if (
                     search_text
                     in text(value).lower()
-                    for value in record.values()
-                )
+                ):
 
-                if found:
+                    found = True
+                    break
 
-                    row = [
-                        record.get(header)
-                        for header in headers
-                    ]
+            if found:
 
-                    results.append({
-                        "sheet": sheet_name,
-                        "headers": headers,
-                        "row": row,
-                        "data": record
-                    })
+                results.append({
 
-        wb.close()
+                    "sheet":
+                        sheet_name,
+
+                    "headers":
+                        converted["headers"],
+
+                    "row":
+                        converted["row"],
+
+                    "data":
+                        record
+
+                })
 
         return {
+
             "query": q,
+
             "sheet": sheet,
+
             "count": len(results),
+
             "results": results
+
         }
+
+    except HTTPException:
+        raise
 
     except Exception as e:
 
         raise HTTPException(
+
             status_code=500,
+
             detail=str(e)
+
         )
 
 
@@ -655,90 +716,127 @@ def search(
 
 @app.get("/dashboard")
 def dashboard(
+
     authenticated: bool = Depends(
         require_auth
     )
+
 ):
 
     try:
 
-        wb = get_workbook()
+        rows = get_all_rows()
 
         today = datetime.now().date()
 
-        # -------------------------------------------------
+
+        # =================================================
         # ORDERS
-        # -------------------------------------------------
+        # =================================================
 
         orders = []
 
-        if "ORDERS" in wb.sheetnames:
+        for item in rows:
 
-            _, orders = rows_from_sheet(
-                wb["ORDERS"]
-            )
+            if text(
+                item.get("sheet")
+            ) == "ORDERS":
+
+                orders.append(
+                    convert_database_row(
+                        item
+                    )["data"]
+                )
+
 
         order_quantity = 0
 
         order_numbers = set()
 
         today_orders = 0
+
         today_order_quantity = 0
 
         size_data = {}
+
         party_data = {}
+
 
         for row in orders:
 
             order_no = first_existing(
+
                 row,
+
                 [
                     "Order No.",
                     "Order No"
                 ]
+
             )
 
             quantity = number(
+
                 first_existing(
+
                     row,
+
                     [
                         "Quantity Pcs.",
                         "Quantity",
                         "QUANTITY"
                     ]
+
                 )
+
             )
 
             row_date = date_only(
+
                 first_existing(
+
                     row,
+
                     [
                         "Date",
                         "DATE"
                     ]
+
                 )
+
             )
 
             size = text(
+
                 first_existing(
+
                     row,
+
                     [
                         "Size",
                         "SIZE"
                     ]
+
                 )
+
             )
 
             party = text(
+
                 first_existing(
+
                     row,
+
                     [
                         "PARTY NAME",
                         "Party Name",
                         "PARTY"
                     ]
+
                 )
+
             )
+
 
             if order_no not in (
                 None,
@@ -749,7 +847,9 @@ def dashboard(
                     text(order_no)
                 )
 
+
             order_quantity += quantity
+
 
             if row_date == today:
 
@@ -759,80 +859,116 @@ def dashboard(
                     quantity
                 )
 
+
             if size:
 
                 if size not in size_data:
 
                     size_data[size] = {
+
                         "size": size,
+
                         "orders": 0,
+
                         "quantity": 0
+
                     }
 
-                size_data[size]["orders"] += 1
+                size_data[size][
+                    "orders"
+                ] += 1
 
-                size_data[size]["quantity"] += (
-                    quantity
-                )
+                size_data[size][
+                    "quantity"
+                ] += quantity
+
 
             if party:
 
                 if party not in party_data:
 
                     party_data[party] = {
+
                         "party": party,
+
                         "orders": 0,
+
                         "quantity": 0
+
                     }
 
-                party_data[party]["orders"] += 1
+                party_data[party][
+                    "orders"
+                ] += 1
 
-                party_data[party]["quantity"] += (
-                    quantity
-                )
+                party_data[party][
+                    "quantity"
+                ] += quantity
 
-        # -------------------------------------------------
+
+        # =================================================
         # DISPATCH
-        # -------------------------------------------------
+        # =================================================
 
         dispatch = []
 
-        if "Dispatched Orders" in wb.sheetnames:
+        for item in rows:
 
-            _, dispatch = rows_from_sheet(
-                wb["Dispatched Orders"]
-            )
+            if text(
+                item.get("sheet")
+            ) == "Dispatched Orders":
+
+                dispatch.append(
+                    convert_database_row(
+                        item
+                    )["data"]
+                )
+
 
         dispatch_quantity = 0
 
         today_dispatch = 0
+
         today_dispatch_quantity = 0
+
 
         for row in dispatch:
 
             quantity = number(
+
                 first_existing(
+
                     row,
+
                     [
                         "Quantity Pcs.",
                         "Quantity",
                         "QUANTITY"
                     ]
+
                 )
+
             )
 
             dispatch_quantity += quantity
 
+
             row_date = date_only(
+
                 first_existing(
+
                     row,
+
                     [
                         "Date",
                         "BILL DATE",
                         "IN/OUT DATE"
                     ]
+
                 )
+
             )
+
 
             if row_date == today:
 
@@ -842,146 +978,223 @@ def dashboard(
                     quantity
                 )
 
-        # -------------------------------------------------
+
+        # =================================================
         # HOLD ORDERS
-        # -------------------------------------------------
+        # =================================================
 
         hold = []
 
-        if "Holded Orders" in wb.sheetnames:
+        for item in rows:
 
-            _, hold = rows_from_sheet(
-                wb["Holded Orders"]
-            )
+            if text(
+                item.get("sheet")
+            ) == "Holded Orders":
+
+                hold.append(
+                    convert_database_row(
+                        item
+                    )["data"]
+                )
+
 
         hold_quantity = 0
+
 
         for row in hold:
 
             hold_quantity += number(
+
                 first_existing(
+
                     row,
+
                     [
                         "Quantity Pcs.",
                         "Quantity",
                         "QUANTITY"
                     ]
+
                 )
+
             )
 
-        wb.close()
 
-        # -------------------------------------------------
-        # CLEAN NUMBERS
-        # -------------------------------------------------
-
-        def clean_number(value):
-
-            if float(value).is_integer():
-                return int(value)
-
-            return round(value, 2)
+        # =================================================
+        # SIZE WISE
+        # =================================================
 
         size_wise = sorted(
+
             [
+
                 {
-                    "size": item["size"],
-                    "orders": item["orders"],
-                    "quantity": clean_number(
-                        item["quantity"]
-                    )
+
+                    "size":
+                        item["size"],
+
+                    "orders":
+                        item["orders"],
+
+                    "quantity":
+                        clean_number(
+                            item["quantity"]
+                        )
+
                 }
-                for item in size_data.values()
+
+                for item in
+                size_data.values()
+
             ],
-            key=lambda x: x["quantity"],
+
+            key=lambda x:
+                x["quantity"],
+
             reverse=True
+
         )
 
+
+        # =================================================
+        # PARTY WISE
+        # =================================================
+
         party_wise = sorted(
+
             [
+
                 {
-                    "party": item["party"],
-                    "orders": item["orders"],
-                    "quantity": clean_number(
-                        item["quantity"]
-                    )
+
+                    "party":
+                        item["party"],
+
+                    "orders":
+                        item["orders"],
+
+                    "quantity":
+                        clean_number(
+                            item["quantity"]
+                        )
+
                 }
-                for item in party_data.values()
+
+                for item in
+                party_data.values()
+
             ],
-            key=lambda x: x["quantity"],
+
+            key=lambda x:
+                x["quantity"],
+
             reverse=True
+
         )
+
+
+        # =================================================
+        # FINAL RESPONSE
+        # =================================================
 
         return {
 
-            "date": today.isoformat(),
+            "date":
+                today.isoformat(),
 
             "today": {
 
-                "orders": today_orders,
+                "orders":
+                    today_orders,
 
-                "order_quantity": clean_number(
-                    today_order_quantity
-                ),
+                "order_quantity":
+                    clean_number(
+                        today_order_quantity
+                    ),
 
-                "dispatch": today_dispatch,
+                "dispatch":
+                    today_dispatch,
 
-                "dispatch_quantity": clean_number(
-                    today_dispatch_quantity
-                )
+                "dispatch_quantity":
+                    clean_number(
+                        today_dispatch_quantity
+                    )
+
             },
+
 
             "orders": {
 
-                "total_rows": len(orders),
+                "total_rows":
+                    len(orders),
 
-                "unique_orders": len(
-                    order_numbers
-                ),
+                "unique_orders":
+                    len(order_numbers),
 
-                "total_quantity": clean_number(
-                    order_quantity
-                )
+                "total_quantity":
+                    clean_number(
+                        order_quantity
+                    )
+
             },
+
 
             "dispatch": {
 
-                "total_rows": len(dispatch),
+                "total_rows":
+                    len(dispatch),
 
-                "total_quantity": clean_number(
-                    dispatch_quantity
-                ),
+                "total_quantity":
+                    clean_number(
+                        dispatch_quantity
+                    ),
 
-                "today_rows": today_dispatch,
+                "today_rows":
+                    today_dispatch,
 
-                "today_quantity": clean_number(
-                    today_dispatch_quantity
-                )
+                "today_quantity":
+                    clean_number(
+                        today_dispatch_quantity
+                    )
+
             },
+
 
             "hold": {
 
-                "orders": len(hold),
+                "orders":
+                    len(hold),
 
-                "quantity": clean_number(
-                    hold_quantity
-                )
+                "quantity":
+                    clean_number(
+                        hold_quantity
+                    )
+
             },
 
-            "size_wise": size_wise,
 
-            "party_wise": party_wise,
+            "size_wise":
+                size_wise,
+
+            "party_wise":
+                party_wise,
 
             "last_updated":
                 datetime.now()
                 .astimezone()
                 .isoformat()
+
         }
+
+
+    except HTTPException:
+        raise
 
     except Exception as e:
 
         raise HTTPException(
+
             status_code=500,
+
             detail=str(e)
+
         )
-```
