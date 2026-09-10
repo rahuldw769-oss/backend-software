@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException, Depends
+```python
+from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from openpyxl import load_workbook
@@ -9,6 +10,7 @@ import hmac
 import hashlib
 import base64
 import json
+import tempfile
 
 
 # =========================================================
@@ -22,7 +24,7 @@ app.add_middleware(
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"]
 )
 
 security = HTTPBearer(auto_error=False)
@@ -34,12 +36,19 @@ USERNAME = os.getenv("RAHUL_USERNAME", "rahul")
 PASSWORD = os.getenv("RAHUL_PASSWORD", "rahul123")
 SECRET = os.getenv("RAHUL_SECRET", "change-this-secret")
 
+# Excel sync ke liye alag secret
+SYNC_SECRET = os.getenv(
+    "RAHUL_SYNC_SECRET",
+    "change-this-sync-secret"
+)
+
 
 # =========================================================
 # HELPERS
 # =========================================================
 
 def get_workbook():
+
     if not EXCEL_FILE.exists():
         raise FileNotFoundError(
             f"Excel file not found: {EXCEL_FILE}"
@@ -54,6 +63,7 @@ def get_workbook():
 
 
 def clean_value(value):
+
     if value is None:
         return None
 
@@ -64,6 +74,7 @@ def clean_value(value):
 
 
 def make_token(username):
+
     payload = {
         "username": username,
         "exp": int(datetime.now().timestamp()) + 86400
@@ -74,7 +85,9 @@ def make_token(username):
         separators=(",", ":")
     ).encode()
 
-    encoded = base64.urlsafe_b64encode(raw).decode().rstrip("=")
+    encoded = base64.urlsafe_b64encode(
+        raw
+    ).decode().rstrip("=")
 
     signature = hmac.new(
         SECRET.encode(),
@@ -86,7 +99,9 @@ def make_token(username):
 
 
 def verify_token(token):
+
     try:
+
         encoded, signature = token.split(".", 1)
 
         expected = hmac.new(
@@ -107,7 +122,9 @@ def verify_token(token):
             encoded + padding
         )
 
-        payload = json.loads(raw.decode())
+        payload = json.loads(
+            raw.decode()
+        )
 
         if payload["exp"] < int(
             datetime.now().timestamp()
@@ -123,6 +140,7 @@ def verify_token(token):
 def require_auth(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
+
     if credentials is None:
         raise HTTPException(
             status_code=401,
@@ -135,7 +153,9 @@ def require_auth(
             detail="Invalid authentication"
         )
 
-    if not verify_token(credentials.credentials):
+    if not verify_token(
+        credentials.credentials
+    ):
         raise HTTPException(
             status_code=401,
             detail="Invalid or expired token"
@@ -145,10 +165,16 @@ def require_auth(
 
 
 def make_headers(headers):
+
     result = []
 
     for i, header in enumerate(headers):
-        name = str(header).strip() if header is not None else ""
+
+        name = (
+            str(header).strip()
+            if header is not None
+            else ""
+        )
 
         if not name:
             name = f"Column {i + 1}"
@@ -157,6 +183,7 @@ def make_headers(headers):
         counter = 2
 
         while name in result:
+
             name = f"{original} ({counter})"
             counter += 1
 
@@ -166,10 +193,12 @@ def make_headers(headers):
 
 
 def rows_from_sheet(ws):
+
     rows = ws.iter_rows(values_only=True)
 
     try:
         raw_headers = next(rows)
+
     except StopIteration:
         return [], []
 
@@ -178,14 +207,26 @@ def rows_from_sheet(ws):
     data = []
 
     for row in rows:
-        if not any(value is not None for value in row):
+
+        if not any(
+            value is not None
+            for value in row
+        ):
             continue
 
         record = {}
 
         for i, header in enumerate(headers):
-            value = row[i] if i < len(row) else None
-            record[header] = clean_value(value)
+
+            value = (
+                row[i]
+                if i < len(row)
+                else None
+            )
+
+            record[header] = clean_value(
+                value
+            )
 
         data.append(record)
 
@@ -193,17 +234,24 @@ def rows_from_sheet(ws):
 
 
 def number(value):
+
     try:
+
         if value is None or value == "":
             return 0
 
-        return float(str(value).replace(",", "").strip())
+        return float(
+            str(value)
+            .replace(",", "")
+            .strip()
+        )
 
     except Exception:
         return 0
 
 
 def date_only(value):
+
     if value is None:
         return None
 
@@ -221,11 +269,14 @@ def date_only(value):
         "%d/%m/%Y",
         "%m/%d/%Y",
     ):
+
         try:
+
             return datetime.strptime(
                 text,
                 fmt
             ).date()
+
         except Exception:
             pass
 
@@ -233,6 +284,7 @@ def date_only(value):
 
 
 def text(value):
+
     if value is None:
         return ""
 
@@ -240,7 +292,9 @@ def text(value):
 
 
 def first_existing(record, names):
+
     for name in names:
+
         if name in record:
             return record[name]
 
@@ -253,6 +307,7 @@ def first_existing(record, names):
 
 @app.get("/")
 def home():
+
     return {
         "status": "online",
         "message": "Rahul Software API is running"
@@ -266,14 +321,29 @@ def home():
 @app.post("/login")
 def login(data: dict):
 
-    username = text(data.get("username"))
-    password = text(data.get("password"))
+    username = text(
+        data.get("username")
+    )
+
+    password = text(
+        data.get("password")
+    )
 
     if (
-        hmac.compare_digest(username, USERNAME)
-        and hmac.compare_digest(password, PASSWORD)
+        hmac.compare_digest(
+            username,
+            USERNAME
+        )
+        and
+        hmac.compare_digest(
+            password,
+            PASSWORD
+        )
     ):
-        token = make_token(username)
+
+        token = make_token(
+            username
+        )
 
         return {
             "status": "success",
@@ -289,13 +359,133 @@ def login(data: dict):
 
 
 # =========================================================
+# EXCEL SYNC FROM OFFICE PC
+# =========================================================
+
+@app.post("/sync-excel")
+async def sync_excel(
+    file: UploadFile = File(...)
+):
+
+    sync_key = file.headers.get(
+        "x-sync-secret"
+    )
+
+    if (
+        not sync_key
+        or not hmac.compare_digest(
+            sync_key,
+            SYNC_SECRET
+        )
+    ):
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid sync secret"
+        )
+
+    if not file.filename:
+        raise HTTPException(
+            status_code=400,
+            detail="No file received"
+        )
+
+    if not file.filename.lower().endswith(
+        ".xlsm"
+    ):
+
+        raise HTTPException(
+            status_code=400,
+            detail="Only .xlsm file is allowed"
+        )
+
+    temp_file = None
+
+    try:
+
+        # Temporary file
+        with tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix=".xlsm",
+            dir=BASE_DIR
+        ) as temp:
+
+            temp_file = Path(
+                temp.name
+            )
+
+            while True:
+
+                chunk = await file.read(
+                    1024 * 1024
+                )
+
+                if not chunk:
+                    break
+
+                temp.write(chunk)
+
+        # Workbook test
+        test_wb = load_workbook(
+            temp_file,
+            read_only=True,
+            data_only=True,
+            keep_vba=True
+        )
+
+        sheet_count = len(
+            test_wb.sheetnames
+        )
+
+        test_wb.close()
+
+        # Replace old Excel safely
+        os.replace(
+            str(temp_file),
+            str(EXCEL_FILE)
+        )
+
+        temp_file = None
+
+        return {
+            "status": "success",
+            "message": "Excel updated successfully",
+            "filename": file.filename,
+            "sheets": sheet_count,
+            "last_updated": datetime.now().astimezone().isoformat()
+        }
+
+    except Exception as e:
+
+        if (
+            temp_file
+            and temp_file.exists()
+        ):
+
+            try:
+                temp_file.unlink()
+            except Exception:
+                pass
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Excel sync failed: {str(e)}"
+        )
+
+
+# =========================================================
 # SHEETS
 # =========================================================
 
 @app.get("/sheets")
-def sheets(authenticated: bool = Depends(require_auth)):
+def sheets(
+    authenticated: bool = Depends(
+        require_auth
+    )
+):
 
     try:
+
         wb = get_workbook()
 
         names = wb.sheetnames
@@ -308,6 +498,7 @@ def sheets(authenticated: bool = Depends(require_auth)):
         }
 
     except Exception as e:
+
         raise HTTPException(
             status_code=500,
             detail=str(e)
@@ -322,13 +513,17 @@ def sheets(authenticated: bool = Depends(require_auth)):
 def get_sheet(
     sheet_name: str,
     limit: int = 100,
-    authenticated: bool = Depends(require_auth)
+    authenticated: bool = Depends(
+        require_auth
+    )
 ):
 
     try:
+
         wb = get_workbook()
 
         if sheet_name not in wb.sheetnames:
+
             wb.close()
 
             raise HTTPException(
@@ -338,11 +533,18 @@ def get_sheet(
 
         ws = wb[sheet_name]
 
-        headers, data = rows_from_sheet(ws)
+        headers, data = rows_from_sheet(
+            ws
+        )
 
         wb.close()
 
-        data = data[:max(1, min(limit, 1000))]
+        data = data[
+            :max(
+                1,
+                min(limit, 1000)
+            )
+        ]
 
         return {
             "sheet": sheet_name,
@@ -355,6 +557,7 @@ def get_sheet(
         raise
 
     except Exception as e:
+
         raise HTTPException(
             status_code=500,
             detail=str(e)
@@ -369,15 +572,19 @@ def get_sheet(
 def search(
     q: str,
     sheet: str = "ALL SHEETS",
-    authenticated: bool = Depends(require_auth)
+    authenticated: bool = Depends(
+        require_auth
+    )
 ):
 
     try:
+
         wb = get_workbook()
 
         search_text = q.strip().lower()
 
         if not search_text:
+
             wb.close()
 
             return {
@@ -399,12 +606,15 @@ def search(
 
             ws = wb[sheet_name]
 
-            headers, data = rows_from_sheet(ws)
+            headers, data = rows_from_sheet(
+                ws
+            )
 
             for record in data:
 
                 found = any(
-                    search_text in text(value).lower()
+                    search_text
+                    in text(value).lower()
                     for value in record.values()
                 )
 
@@ -432,6 +642,7 @@ def search(
         }
 
     except Exception as e:
+
         raise HTTPException(
             status_code=500,
             detail=str(e)
@@ -444,10 +655,13 @@ def search(
 
 @app.get("/dashboard")
 def dashboard(
-    authenticated: bool = Depends(require_auth)
+    authenticated: bool = Depends(
+        require_auth
+    )
 ):
 
     try:
+
         wb = get_workbook()
 
         today = datetime.now().date()
@@ -459,11 +673,13 @@ def dashboard(
         orders = []
 
         if "ORDERS" in wb.sheetnames:
+
             _, orders = rows_from_sheet(
                 wb["ORDERS"]
             )
 
         order_quantity = 0
+
         order_numbers = set()
 
         today_orders = 0
@@ -476,7 +692,10 @@ def dashboard(
 
             order_no = first_existing(
                 row,
-                ["Order No.", "Order No"]
+                [
+                    "Order No.",
+                    "Order No"
+                ]
             )
 
             quantity = number(
@@ -493,14 +712,20 @@ def dashboard(
             row_date = date_only(
                 first_existing(
                     row,
-                    ["Date", "DATE"]
+                    [
+                        "Date",
+                        "DATE"
+                    ]
                 )
             )
 
             size = text(
                 first_existing(
                     row,
-                    ["Size", "SIZE"]
+                    [
+                        "Size",
+                        "SIZE"
+                    ]
                 )
             )
 
@@ -519,6 +744,7 @@ def dashboard(
                 None,
                 ""
             ):
+
                 order_numbers.add(
                     text(order_no)
                 )
@@ -526,11 +752,17 @@ def dashboard(
             order_quantity += quantity
 
             if row_date == today:
+
                 today_orders += 1
-                today_order_quantity += quantity
+
+                today_order_quantity += (
+                    quantity
+                )
 
             if size:
+
                 if size not in size_data:
+
                     size_data[size] = {
                         "size": size,
                         "orders": 0,
@@ -538,10 +770,15 @@ def dashboard(
                     }
 
                 size_data[size]["orders"] += 1
-                size_data[size]["quantity"] += quantity
+
+                size_data[size]["quantity"] += (
+                    quantity
+                )
 
             if party:
+
                 if party not in party_data:
+
                     party_data[party] = {
                         "party": party,
                         "orders": 0,
@@ -549,7 +786,10 @@ def dashboard(
                     }
 
                 party_data[party]["orders"] += 1
-                party_data[party]["quantity"] += quantity
+
+                party_data[party]["quantity"] += (
+                    quantity
+                )
 
         # -------------------------------------------------
         # DISPATCH
@@ -558,11 +798,13 @@ def dashboard(
         dispatch = []
 
         if "Dispatched Orders" in wb.sheetnames:
+
             _, dispatch = rows_from_sheet(
                 wb["Dispatched Orders"]
             )
 
         dispatch_quantity = 0
+
         today_dispatch = 0
         today_dispatch_quantity = 0
 
@@ -593,8 +835,12 @@ def dashboard(
             )
 
             if row_date == today:
+
                 today_dispatch += 1
-                today_dispatch_quantity += quantity
+
+                today_dispatch_quantity += (
+                    quantity
+                )
 
         # -------------------------------------------------
         # HOLD ORDERS
@@ -603,6 +849,7 @@ def dashboard(
         hold = []
 
         if "Holded Orders" in wb.sheetnames:
+
             _, hold = rows_from_sheet(
                 wb["Holded Orders"]
             )
@@ -666,49 +913,69 @@ def dashboard(
         )
 
         return {
+
             "date": today.isoformat(),
 
             "today": {
+
                 "orders": today_orders,
+
                 "order_quantity": clean_number(
                     today_order_quantity
                 ),
+
                 "dispatch": today_dispatch,
+
                 "dispatch_quantity": clean_number(
                     today_dispatch_quantity
                 )
             },
 
             "orders": {
+
                 "total_rows": len(orders),
-                "unique_orders": len(order_numbers),
+
+                "unique_orders": len(
+                    order_numbers
+                ),
+
                 "total_quantity": clean_number(
                     order_quantity
                 )
             },
 
             "dispatch": {
+
                 "total_rows": len(dispatch),
+
                 "total_quantity": clean_number(
                     dispatch_quantity
                 ),
+
                 "today_rows": today_dispatch,
+
                 "today_quantity": clean_number(
                     today_dispatch_quantity
                 )
             },
 
             "hold": {
+
                 "orders": len(hold),
+
                 "quantity": clean_number(
                     hold_quantity
                 )
             },
 
             "size_wise": size_wise,
+
             "party_wise": party_wise,
 
-            "last_updated": datetime.now().astimezone().isoformat()
+            "last_updated":
+                datetime.now()
+                .astimezone()
+                .isoformat()
         }
 
     except Exception as e:
@@ -717,3 +984,4 @@ def dashboard(
             status_code=500,
             detail=str(e)
         )
+```
