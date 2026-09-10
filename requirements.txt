@@ -3,3 +3,4 @@ uvicorn
 openpyxl
 requests
 PyJWT
+python-multipart
