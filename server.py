@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import os
 import hmac
 import hashlib
@@ -220,9 +220,7 @@ def date_only(value):
 
             return (
                 base
-                + __import__("datetime").timedelta(
-                    days=serial
-                )
+                + timedelta(days=serial)
             ).date()
 
     except Exception:
@@ -260,24 +258,6 @@ def normalize_material(value):
 
 def normalize_size(value):
 
-    """
-    Size ko unnecessarily modify nahi karta.
-
-    Sirf:
-    - leading/trailing spaces remove
-    - multiple spaces ko single space
-
-    Example:
-
-    1200+50X1050+50
-
-    aur
-
-    1190+60X1140+60
-
-    alag hi rahenge.
-    """
-
     value = text(value)
 
     value = " ".join(
@@ -288,19 +268,6 @@ def normalize_size(value):
 
 
 def get_row_position(row, position):
-
-    """
-    Excel column number - 1 based.
-
-    A = 1
-    B = 2
-    C = 3
-    ...
-    F = 6
-    I = 9
-    K = 11
-    M = 13
-    """
 
     index = position - 1
 
@@ -952,8 +919,7 @@ def dashboard(
 
 
             # -------------------------------------------------
-            # ORDER NO
-            # Column A
+            # ORDER NO = COLUMN A
             # -------------------------------------------------
 
             order_no = get_row_position(
@@ -963,8 +929,7 @@ def dashboard(
 
 
             # -------------------------------------------------
-            # PARTY
-            # Column C
+            # PARTY = COLUMN C
             # -------------------------------------------------
 
             party = text(
@@ -976,8 +941,7 @@ def dashboard(
 
 
             # -------------------------------------------------
-            # SIZE
-            # Column D
+            # SIZE = COLUMN D
             # -------------------------------------------------
 
             raw_size = get_row_position(
@@ -991,8 +955,7 @@ def dashboard(
 
 
             # -------------------------------------------------
-            # QUANTITY
-            # Column F
+            # QUANTITY = COLUMN F
             # -------------------------------------------------
 
             quantity = number(
@@ -1005,7 +968,6 @@ def dashboard(
 
             # -------------------------------------------------
             # DATE
-            # Existing Date column
             # -------------------------------------------------
 
             row_date = date_only(
@@ -1025,8 +987,7 @@ def dashboard(
 
 
             # -------------------------------------------------
-            # DESTINATION
-            # Column I
+            # DESTINATION = COLUMN I
             # -------------------------------------------------
 
             destination = text(
@@ -1070,10 +1031,8 @@ def dashboard(
             # =================================================
             # SIZE WISE
             #
-            # IMPORTANT:
-            # KEY = ONLY SIZE
-            #
-            # Party ko size key me kabhi nahi milaya jayega.
+            # SIZE = D
+            # QUANTITY = F
             # =================================================
 
             if size:
@@ -1118,10 +1077,17 @@ def dashboard(
             # =================================================
             # PARTY WISE
             #
+            # FINAL HIERARCHY:
+            #
             # PARTY
-            #   SIZE
-            #       DESTINATION
+            #   DESTINATION
+            #       SIZE
             #           QUANTITY
+            #
+            # PARTY = C
+            # DESTINATION = I
+            # SIZE = D
+            # QUANTITY = F
             # =================================================
 
             if party:
@@ -1139,63 +1105,18 @@ def dashboard(
                         "quantity":
                             0,
 
-                        "materials":
-                            {}
-
-                    }
-
-
-                party_data[party][
-                    "orders"
-                ] += 1
-
-
-                party_data[party][
-                    "quantity"
-                ] += quantity
-
-
-                material = (
-                    size
-                    if size
-                    else "UNKNOWN"
-                )
-
-
-                if material not in party_data[
-                    party
-                ]["materials"]:
-
-                    party_data[
-                        party
-                    ]["materials"][material] = {
-
-                        "material":
-                            material,
-
-                        "orders":
-                            0,
-
-                        "quantity":
-                            0,
-
                         "destinations":
                             {}
 
                     }
 
 
-                material_data = party_data[
-                    party
-                ]["materials"][material]
-
-
-                material_data[
+                party_data[party][
                     "orders"
                 ] += 1
 
 
-                material_data[
+                party_data[party][
                     "quantity"
                 ] += quantity
 
@@ -1212,18 +1133,75 @@ def dashboard(
                 )
 
 
+                # =================================================
+                # DESTINATION
+                # =================================================
+
                 if destination_name not in (
-                    material_data[
-                        "destinations"
-                    ]
+                    party_data[
+                        party
+                    ]["destinations"]
                 ):
 
-                    material_data[
-                        "destinations"
-                    ][destination_name] = {
+                    party_data[
+                        party
+                    ]["destinations"][destination_name] = {
 
                         "destination":
                             destination_name,
+
+                        "orders":
+                            0,
+
+                        "quantity":
+                            0,
+
+                        "sizes":
+                            {}
+
+                    }
+
+
+                destination_data = (
+                    party_data[
+                        party
+                    ]["destinations"][destination_name]
+                )
+
+
+                destination_data[
+                    "orders"
+                ] += 1
+
+
+                destination_data[
+                    "quantity"
+                ] += quantity
+
+
+                # =================================================
+                # SIZE INSIDE DESTINATION
+                # =================================================
+
+                size_name = (
+                    size
+                    if size
+                    else "UNKNOWN"
+                )
+
+
+                if size_name not in (
+                    destination_data[
+                        "sizes"
+                    ]
+                ):
+
+                    destination_data[
+                        "sizes"
+                    ][size_name] = {
+
+                        "size":
+                            size_name,
 
                         "orders":
                             0,
@@ -1234,19 +1212,19 @@ def dashboard(
                     }
 
 
-                destination_data = (
-                    material_data[
-                        "destinations"
-                    ][destination_name]
+                size_data_item = (
+                    destination_data[
+                        "sizes"
+                    ][size_name]
                 )
 
 
-                destination_data[
+                size_data_item[
                     "orders"
                 ] += 1
 
 
-                destination_data[
+                size_data_item[
                     "quantity"
                 ] += quantity
 
@@ -1285,7 +1263,7 @@ def dashboard(
 
 
             # Dashboard dispatch quantity
-            # Keep existing header based logic
+            # Existing logic preserved
 
             quantity = number(
 
@@ -1308,7 +1286,7 @@ def dashboard(
 
 
             # Dashboard today's dispatch
-            # Use Date header when available
+            # Existing logic preserved
 
             row_date = date_only(
 
@@ -1386,10 +1364,6 @@ def dashboard(
 
         for item in size_data.values():
 
-            # Unique order count for this size.
-            # Agar Order No available nahi hai,
-            # row count fallback rahega.
-
             unique_size_orders = len(
                 item["order_numbers"]
             )
@@ -1429,6 +1403,11 @@ def dashboard(
 
         # =================================================
         # PARTY WISE FINAL
+        #
+        # PARTY
+        #   DESTINATION
+        #       SIZE
+        #           QUANTITY
         # =================================================
 
         party_wise = []
@@ -1436,37 +1415,39 @@ def dashboard(
 
         for item in party_data.values():
 
-            materials = []
+            destinations = []
 
 
-            for material_item in item[
-                "materials"
-            ].values():
+            for destination_item in (
+                item[
+                    "destinations"
+                ].values()
+            ):
 
-                destinations = []
+                sizes = []
 
 
-                for destination_item in (
-                    material_item[
-                        "destinations"
+                for size_item in (
+                    destination_item[
+                        "sizes"
                     ].values()
                 ):
 
-                    destinations.append({
+                    sizes.append({
 
-                        "destination":
-                            destination_item[
-                                "destination"
+                        "size":
+                            size_item[
+                                "size"
                             ],
 
                         "orders":
-                            destination_item[
+                            size_item[
                                 "orders"
                             ],
 
                         "quantity":
                             clean_number(
-                                destination_item[
+                                size_item[
                                     "quantity"
                                 ]
                             )
@@ -1474,7 +1455,7 @@ def dashboard(
                     })
 
 
-                destinations.sort(
+                sizes.sort(
 
                     key=lambda x:
                         x["quantity"],
@@ -1484,32 +1465,32 @@ def dashboard(
                 )
 
 
-                materials.append({
+                destinations.append({
 
-                    "material":
-                        material_item[
-                            "material"
+                    "destination":
+                        destination_item[
+                            "destination"
                         ],
 
                     "orders":
-                        material_item[
+                        destination_item[
                             "orders"
                         ],
 
                     "quantity":
                         clean_number(
-                            material_item[
+                            destination_item[
                                 "quantity"
                             ]
                         ),
 
-                    "destinations":
-                        destinations
+                    "sizes":
+                        sizes
 
                 })
 
 
-            materials.sort(
+            destinations.sort(
 
                 key=lambda x:
                     x["quantity"],
@@ -1532,8 +1513,8 @@ def dashboard(
                         item["quantity"]
                     ),
 
-                "materials":
-                    materials
+                "destinations":
+                    destinations
 
             })
 
@@ -1777,9 +1758,11 @@ def monthly_report_months(
 #
 # EXACT SOURCE:
 #
-# Column K = Date
-# Column M = Type of Material
-# Column F = Quantity
+# K = DATE
+# M = MATERIAL
+# F = QUANTITY
+#
+# SAME DATE + SAME MATERIAL = PLUS
 # =========================================================
 
 @app.get("/monthly-report/daily-pcs-dispatch")
@@ -1823,7 +1806,7 @@ def daily_pcs_dispatch(
 
 
         # =================================================
-        # CREATE EMPTY DAILY DATA
+        # DAYS IN MONTH
         # =================================================
 
         days_in_month = calendar.monthrange(
@@ -1831,6 +1814,10 @@ def daily_pcs_dispatch(
             month
         )[1]
 
+
+        # =================================================
+        # EMPTY DAILY DATA
+        # =================================================
 
         daily_data = {}
 
@@ -1905,6 +1892,10 @@ def daily_pcs_dispatch(
                 continue
 
 
+            # =================================================
+            # YEAR + MONTH FILTER
+            # =================================================
+
             if row_date.year != year:
 
                 continue
@@ -1916,7 +1907,7 @@ def daily_pcs_dispatch(
 
 
             # =================================================
-            # COLUMN M = TYPE OF MATERIAL
+            # COLUMN M = MATERIAL
             # =================================================
 
             material_type = text(
@@ -1928,6 +1919,27 @@ def daily_pcs_dispatch(
 
             )
 
+
+            if not material_type:
+
+                skipped_unknown_material += 1
+
+                continue
+
+
+            # =================================================
+            # NORMALIZE MATERIAL
+            #
+            # PCS / KG ko alag material nahi samjhenge.
+            #
+            # Example:
+            #
+            # SLIPSHEET
+            # SLIP SHEET
+            # SLIP-SHEET
+            #
+            # sab same material.
+            # =================================================
 
             normalized = normalize_material(
                 material_type
@@ -1961,6 +1973,12 @@ def daily_pcs_dispatch(
 
             )
 
+
+            # =================================================
+            # SAME DATE + SAME MATERIAL
+            #
+            # AUTOMATIC PLUS
+            # =================================================
 
             daily_data[
                 row_date.day
