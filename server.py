@@ -45,80 +45,78 @@ TABLE = "excel_rows"
 
 # =========================================================
 # MONTHLY REPORT MATERIAL COLUMNS
+#
+# EXACT REQUIRED FORMAT
 # =========================================================
 
 MONTHLY_MATERIALS = [
-    "SLIP SHEET   (pcs)",
-    "FRESCO PAD PCS",
-    "M FOLD PCS",
-    "CORE PIPE SCRAP   (KG)",
-    "PAPER SCRAP (KG)",
-    "TOILET ROLL (PCS)",
-    "KRAFT PAPER (KGS)",
-    "PET GRIP SHEET   (PCS)",
-    "KRAFT PAPEER   GRIPSHEET (PCS)",
-    "GRIP SLIP SHEET   (PCS)",
-    "TISSUE PAPER/   NAPKIN (pcs)",
+    "SLIPSHEET",
+    "FRESCO PAD",
+    "M FOLD",
+    "CORE PIPE SCRAP",
+    "PAPER SCRAP",
+    "TOILET ROLL",
+    "KRAFT PAPER",
+    "PET GRIPSHEET",
+    "TISSUE PAPER/   NAPKIN",
     "KITCHEN ROLL",
-    "PLASTIC SHEET   (PCS)",
-    "JRT (pcs)",
-    "Z FOLD (PCS)",
+    "PLASTIC SHEET",
+    "JRT",
+    "Z FOLD",
 ]
 
 
 # =========================================================
 # MATERIAL MAPPING
+#
+# NORMALIZED MATERIAL -> REPORT COLUMN
+#
+# PCS / KG / KGS / NOS etc. are removed BEFORE mapping.
 # =========================================================
 
 MATERIAL_MAPPING = {
 
-    "SLIPSHEET": "SLIP SHEET   (pcs)",
-    "SLIP SHEET": "SLIP SHEET   (pcs)",
+    "SLIPSHEET": "SLIPSHEET",
+    "SLIP SHEET": "SLIPSHEET",
 
-    "FRESCOPAD": "FRESCO PAD PCS",
-    "FRESCO PAD": "FRESCO PAD PCS",
+    "FRESCOPAD": "FRESCO PAD",
+    "FRESCO PAD": "FRESCO PAD",
 
-    "MFOLD": "M FOLD PCS",
-    "M FOLD": "M FOLD PCS",
+    "MFOLD": "M FOLD",
+    "M FOLD": "M FOLD",
 
-    "COREPIPESCRAP": "CORE PIPE SCRAP   (KG)",
-    "CORE PIPE SCRAP": "CORE PIPE SCRAP   (KG)",
+    "COREPIPESCRAP": "CORE PIPE SCRAP",
+    "CORE PIPE SCRAP": "CORE PIPE SCRAP",
 
-    "PAPERSCRAP": "PAPER SCRAP (KG)",
-    "PAPER SCRAP": "PAPER SCRAP (KG)",
+    "PAPERSCRAP": "PAPER SCRAP",
+    "PAPER SCRAP": "PAPER SCRAP",
 
-    "TOILETROLL": "TOILET ROLL (PCS)",
-    "TOILET ROLL": "TOILET ROLL (PCS)",
+    "TOILETROLL": "TOILET ROLL",
+    "TOILET ROLL": "TOILET ROLL",
 
-    "KRAFTPAPER": "KRAFT PAPER (KGS)",
-    "KRAFT PAPER": "KRAFT PAPER (KGS)",
+    "KRAFTPAPER": "KRAFT PAPER",
+    "KRAFT PAPER": "KRAFT PAPER",
 
-    "PETGRIPSHEET": "PET GRIP SHEET   (PCS)",
-    "PETGRIP SHEET": "PET GRIP SHEET   (PCS)",
-    "PET GRIP SHEET": "PET GRIP SHEET   (PCS)",
+    "PETGRIPSHEET": "PET GRIPSHEET",
+    "PET GRIP SHEET": "PET GRIPSHEET",
+    "PETGRIP SHEET": "PET GRIPSHEET",
 
-    "KRAFTPAPERGRIPSHEET": "KRAFT PAPEER   GRIPSHEET (PCS)",
-    "KRAFT PAPER GRIPSHEET": "KRAFT PAPEER   GRIPSHEET (PCS)",
-
-    "GRIPSLIPSHEET": "GRIP SLIP SHEET   (PCS)",
-    "GRIP SLIP SHEET": "GRIP SLIP SHEET   (PCS)",
-
-    "NAPKIN": "TISSUE PAPER/   NAPKIN (pcs)",
-    "TISSUEPAPER": "TISSUE PAPER/   NAPKIN (pcs)",
-    "TISSUE PAPER": "TISSUE PAPER/   NAPKIN (pcs)",
-    "TISSUEPAPERNAPKIN": "TISSUE PAPER/   NAPKIN (pcs)",
-    "TISSUE PAPER/NAPKIN": "TISSUE PAPER/   NAPKIN (pcs)",
+    "NAPKIN": "TISSUE PAPER/   NAPKIN",
+    "TISSUEPAPER": "TISSUE PAPER/   NAPKIN",
+    "TISSUE PAPER": "TISSUE PAPER/   NAPKIN",
+    "TISSUEPAPERNAPKIN": "TISSUE PAPER/   NAPKIN",
+    "TISSUE PAPER NAPKIN": "TISSUE PAPER/   NAPKIN",
 
     "KITCHENROLL": "KITCHEN ROLL",
     "KITCHEN ROLL": "KITCHEN ROLL",
 
-    "PLASTICSHEET": "PLASTIC SHEET   (PCS)",
-    "PLASTIC SHEET": "PLASTIC SHEET   (PCS)",
+    "PLASTICSHEET": "PLASTIC SHEET",
+    "PLASTIC SHEET": "PLASTIC SHEET",
 
-    "JRT": "JRT (pcs)",
+    "JRT": "JRT",
 
-    "ZFOLD": "Z FOLD (PCS)",
-    "Z FOLD": "Z FOLD (PCS)",
+    "ZFOLD": "Z FOLD",
+    "Z FOLD": "Z FOLD",
 }
 
 
@@ -240,20 +238,75 @@ def first_existing(record, names):
     return None
 
 
+# =========================================================
+# MATERIAL NORMALIZATION
+#
+# IMPORTANT:
+#
+# PCS
+# PC
+# KG
+# KGS
+# NOS
+# NO
+# KILOGRAM
+# KILOGRAMS
+#
+# ko material name ka part nahi maana jayega.
+#
+# Example:
+#
+# SLIP SHEET PCS
+# SLIP SHEET
+# SLIP-SHEET PCS
+#
+# sab -> SLIPSHEET
+#
+# Example:
+#
+# PAPER SCRAP KG
+# PAPER SCRAP KGS
+# PAPER-SCRAP
+#
+# sab -> PAPERSCRAP
+# =========================================================
+
 def normalize_material(value):
 
     value = text(value).upper()
 
     value = (
         value
-        .replace(" ", "")
-        .replace("-", "")
-        .replace("_", "")
-        .replace("/", "")
-        .replace("\\", "")
+        .replace("\u00a0", " ")
+        .replace("\t", " ")
+        .replace("-", " ")
+        .replace("_", " ")
+        .replace("/", " ")
+        .replace("\\", " ")
+        .replace("(", " ")
+        .replace(")", " ")
     )
 
-    return value
+    parts = value.split()
+
+    units_to_remove = {
+        "PCS",
+        "PC",
+        "KG",
+        "KGS",
+        "NOS",
+        "NO",
+        "KILOGRAM",
+        "KILOGRAMS",
+    }
+
+    parts = [
+        part
+        for part in parts
+        if part not in units_to_remove
+    ]
+
+    return " ".join(parts)
 
 
 def normalize_size(value):
@@ -1030,9 +1083,6 @@ def dashboard(
 
             # =================================================
             # SIZE WISE
-            #
-            # SIZE = D
-            # QUANTITY = F
             # =================================================
 
             if size:
@@ -1077,17 +1127,10 @@ def dashboard(
             # =================================================
             # PARTY WISE
             #
-            # FINAL HIERARCHY:
-            #
             # PARTY
             #   DESTINATION
             #       SIZE
             #           QUANTITY
-            #
-            # PARTY = C
-            # DESTINATION = I
-            # SIZE = D
-            # QUANTITY = F
             # =================================================
 
             if party:
@@ -1262,9 +1305,6 @@ def dashboard(
             record = dispatch_item["data"]
 
 
-            # Dashboard dispatch quantity
-            # Existing logic preserved
-
             quantity = number(
 
                 first_existing(
@@ -1284,9 +1324,6 @@ def dashboard(
 
             dispatch_quantity += quantity
 
-
-            # Dashboard today's dispatch
-            # Existing logic preserved
 
             row_date = date_only(
 
@@ -1929,22 +1966,27 @@ def daily_pcs_dispatch(
 
             # =================================================
             # NORMALIZE MATERIAL
-            #
-            # PCS / KG ko alag material nahi samjhenge.
-            #
-            # Example:
-            #
-            # SLIPSHEET
-            # SLIP SHEET
-            # SLIP-SHEET
-            #
-            # sab same material.
             # =================================================
 
             normalized = normalize_material(
                 material_type
             )
 
+
+            # =================================================
+            # SPECIAL NORMALIZATION
+            #
+            # TISSUE PAPER / NAPKIN
+            # =================================================
+
+            if normalized == "TISSUE PAPER NAPKIN":
+
+                normalized = "TISSUE PAPER NAPKIN"
+
+
+            # =================================================
+            # MAP TO REPORT COLUMN
+            # =================================================
 
             report_column = (
                 MATERIAL_MAPPING.get(
