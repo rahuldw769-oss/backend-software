@@ -18,7 +18,6 @@ import calendar
 
 app = FastAPI(title="Rahul Software API")
 
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,7 +25,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 security = HTTPBearer(auto_error=False)
 
@@ -46,7 +44,7 @@ TABLE = "excel_rows"
 
 
 # =========================================================
-# MONTHLY REPORT - FIXED MATERIAL COLUMNS
+# MONTHLY REPORT MATERIAL COLUMNS
 # =========================================================
 
 MONTHLY_MATERIALS = [
@@ -69,115 +67,58 @@ MONTHLY_MATERIALS = [
 
 
 # =========================================================
-# MATERIAL TYPE MAPPING
+# MATERIAL MAPPING
 # =========================================================
-#
-# Excel ke "TYPE OF MATERIAL" ko monthly report ke
-# fixed column ke saath map kiya gaya hai.
-#
-# Matching uppercase + spaces remove karke hoti hai.
-#
 
 MATERIAL_MAPPING = {
 
-    "SLIPSHEET":
-        "SLIP SHEET   (pcs)",
+    "SLIPSHEET": "SLIP SHEET   (pcs)",
+    "SLIP SHEET": "SLIP SHEET   (pcs)",
 
-    "SLIP SHEET":
-        "SLIP SHEET   (pcs)",
+    "FRESCOPAD": "FRESCO PAD PCS",
+    "FRESCO PAD": "FRESCO PAD PCS",
 
-    "FRESCOPAD":
-        "FRESCO PAD PCS",
+    "MFOLD": "M FOLD PCS",
+    "M FOLD": "M FOLD PCS",
 
-    "FRESCO PAD":
-        "FRESCO PAD PCS",
+    "COREPIPESCRAP": "CORE PIPE SCRAP   (KG)",
+    "CORE PIPE SCRAP": "CORE PIPE SCRAP   (KG)",
 
-    "MFOLD":
-        "M FOLD PCS",
+    "PAPERSCRAP": "PAPER SCRAP (KG)",
+    "PAPER SCRAP": "PAPER SCRAP (KG)",
 
-    "M FOLD":
-        "M FOLD PCS",
+    "TOILETROLL": "TOILET ROLL (PCS)",
+    "TOILET ROLL": "TOILET ROLL (PCS)",
 
-    "COREPIPESCRAP":
-        "CORE PIPE SCRAP   (KG)",
+    "KRAFTPAPER": "KRAFT PAPER (KGS)",
+    "KRAFT PAPER": "KRAFT PAPER (KGS)",
 
-    "CORE PIPE SCRAP":
-        "CORE PIPE SCRAP   (KG)",
+    "PETGRIPSHEET": "PET GRIP SHEET   (PCS)",
+    "PETGRIP SHEET": "PET GRIP SHEET   (PCS)",
+    "PET GRIP SHEET": "PET GRIP SHEET   (PCS)",
 
-    "PAPERSCRAP":
-        "PAPER SCRAP (KG)",
+    "KRAFTPAPERGRIPSHEET": "KRAFT PAPEER   GRIPSHEET (PCS)",
+    "KRAFT PAPER GRIPSHEET": "KRAFT PAPEER   GRIPSHEET (PCS)",
 
-    "PAPER SCRAP":
-        "PAPER SCRAP (KG)",
+    "GRIPSLIPSHEET": "GRIP SLIP SHEET   (PCS)",
+    "GRIP SLIP SHEET": "GRIP SLIP SHEET   (PCS)",
 
-    "TOILETROLL":
-        "TOILET ROLL (PCS)",
+    "NAPKIN": "TISSUE PAPER/   NAPKIN (pcs)",
+    "TISSUEPAPER": "TISSUE PAPER/   NAPKIN (pcs)",
+    "TISSUE PAPER": "TISSUE PAPER/   NAPKIN (pcs)",
+    "TISSUEPAPERNAPKIN": "TISSUE PAPER/   NAPKIN (pcs)",
+    "TISSUE PAPER/NAPKIN": "TISSUE PAPER/   NAPKIN (pcs)",
 
-    "TOILET ROLL":
-        "TOILET ROLL (PCS)",
+    "KITCHENROLL": "KITCHEN ROLL",
+    "KITCHEN ROLL": "KITCHEN ROLL",
 
-    "KRAFTPAPER":
-        "KRAFT PAPER (KGS)",
+    "PLASTICSHEET": "PLASTIC SHEET   (PCS)",
+    "PLASTIC SHEET": "PLASTIC SHEET   (PCS)",
 
-    "KRAFT PAPER":
-        "KRAFT PAPER (KGS)",
+    "JRT": "JRT (pcs)",
 
-    "PETGRIPSHEET":
-        "PET GRIP SHEET   (PCS)",
-
-    "PET GRIP SHEET":
-        "PET GRIP SHEET   (PCS)",
-
-    "PETGRIP SHEET":
-        "PET GRIP SHEET   (PCS)",
-
-    "KRAFTPAPERGRIPSHEET":
-        "KRAFT PAPEER   GRIPSHEET (PCS)",
-
-    "KRAFT PAPER GRIPSHEET":
-        "KRAFT PAPEER   GRIPSHEET (PCS)",
-
-    "GRIPSLIPSHEET":
-        "GRIP SLIP SHEET   (PCS)",
-
-    "GRIP SLIP SHEET":
-        "GRIP SLIP SHEET   (PCS)",
-
-    "NAPKIN":
-        "TISSUE PAPER/   NAPKIN (pcs)",
-
-    "TISSUEPAPER":
-        "TISSUE PAPER/   NAPKIN (pcs)",
-
-    "TISSUE PAPER":
-        "TISSUE PAPER/   NAPKIN (pcs)",
-
-    "TISSUEPAPERNAPKIN":
-        "TISSUE PAPER/   NAPKIN (pcs)",
-
-    "TISSUE PAPER/NAPKIN":
-        "TISSUE PAPER/   NAPKIN (pcs)",
-
-    "KITCHENROLL":
-        "KITCHEN ROLL",
-
-    "KITCHEN ROLL":
-        "KITCHEN ROLL",
-
-    "PLASTICSHEET":
-        "PLASTIC SHEET   (PCS)",
-
-    "PLASTIC SHEET":
-        "PLASTIC SHEET   (PCS)",
-
-    "JRT":
-        "JRT (pcs)",
-
-    "ZFOLD":
-        "Z FOLD (PCS)",
-
-    "Z FOLD":
-        "Z FOLD (PCS)",
+    "ZFOLD": "Z FOLD (PCS)",
+    "Z FOLD": "Z FOLD (PCS)",
 }
 
 
@@ -247,10 +188,13 @@ def date_only(value):
 
     formats = (
         "%Y-%m-%d",
+        "%Y-%m-%d %H:%M:%S",
         "%d-%m-%Y",
         "%d/%m/%Y",
         "%m/%d/%Y",
         "%d.%m.%Y",
+        "%d-%m-%y",
+        "%d/%m/%y",
     )
 
     for fmt in formats:
@@ -264,6 +208,25 @@ def date_only(value):
 
         except Exception:
             pass
+
+    # Excel serial date fallback
+    try:
+
+        serial = float(value)
+
+        if 1 <= serial <= 60000:
+
+            base = datetime(1899, 12, 30)
+
+            return (
+                base
+                + __import__("datetime").timedelta(
+                    days=serial
+                )
+            ).date()
+
+    except Exception:
+        pass
 
     return None
 
@@ -295,13 +258,48 @@ def normalize_material(value):
     return value
 
 
+def normalize_size(value):
+
+    """
+    Size ko unnecessarily modify nahi karta.
+
+    Sirf:
+    - leading/trailing spaces remove
+    - multiple spaces ko single space
+
+    Example:
+
+    1200+50X1050+50
+
+    aur
+
+    1190+60X1140+60
+
+    alag hi rahenge.
+    """
+
+    value = text(value)
+
+    value = " ".join(
+        value.split()
+    )
+
+    return value
+
+
 def get_row_position(row, position):
 
     """
-    position = 1 based Excel column number.
+    Excel column number - 1 based.
 
-    Example:
-    Column I = 9
+    A = 1
+    B = 2
+    C = 3
+    ...
+    F = 6
+    I = 9
+    K = 11
+    M = 13
     """
 
     index = position - 1
@@ -544,7 +542,6 @@ def convert_database_row(item):
         "data": {
             str(headers[i]):
                 row[i] if i < len(row) else None
-
             for i in range(len(headers))
         }
 
@@ -903,7 +900,6 @@ def dashboard(
 
         today = datetime.now().date()
 
-
         # =================================================
         # ORDERS
         # =================================================
@@ -921,8 +917,13 @@ def dashboard(
                 )
 
                 orders.append({
-                    "data": converted["data"],
-                    "row": converted["row"]
+
+                    "data":
+                        converted["data"],
+
+                    "row":
+                        converted["row"]
+
                 })
 
 
@@ -939,6 +940,10 @@ def dashboard(
         party_data = {}
 
 
+        # =================================================
+        # ORDER PROCESSING
+        # =================================================
+
         for order_item in orders:
 
             row = order_item["row"]
@@ -946,34 +951,62 @@ def dashboard(
             record = order_item["data"]
 
 
-            order_no = first_existing(
+            # -------------------------------------------------
+            # ORDER NO
+            # Column A
+            # -------------------------------------------------
 
-                record,
-
-                [
-                    "Order No.",
-                    "Order No"
-                ]
-
+            order_no = get_row_position(
+                row,
+                1
             )
 
+
+            # -------------------------------------------------
+            # PARTY
+            # Column C
+            # -------------------------------------------------
+
+            party = text(
+                get_row_position(
+                    row,
+                    3
+                )
+            )
+
+
+            # -------------------------------------------------
+            # SIZE
+            # Column D
+            # -------------------------------------------------
+
+            raw_size = get_row_position(
+                row,
+                4
+            )
+
+            size = normalize_size(
+                raw_size
+            )
+
+
+            # -------------------------------------------------
+            # QUANTITY
+            # Column F
+            # -------------------------------------------------
 
             quantity = number(
-
-                first_existing(
-
-                    record,
-
-                    [
-                        "Quantity Pcs.",
-                        "Quantity",
-                        "QUANTITY"
-                    ]
-
+                get_row_position(
+                    row,
+                    6
                 )
-
             )
 
+
+            # -------------------------------------------------
+            # DATE
+            # Existing Date column
+            # -------------------------------------------------
 
             row_date = date_only(
 
@@ -991,41 +1024,10 @@ def dashboard(
             )
 
 
-            size = text(
-
-                first_existing(
-
-                    record,
-
-                    [
-                        "Size",
-                        "SIZE"
-                    ]
-
-                )
-
-            )
-
-
-            party = text(
-
-                first_existing(
-
-                    record,
-
-                    [
-                        "PARTY NAME",
-                        "Party Name",
-                        "PARTY"
-                    ]
-
-                )
-
-
-            # =================================================
-            # IMPORTANT:
-            # ORDERS COLUMN I = DESTINATION
-            # =================================================
+            # -------------------------------------------------
+            # DESTINATION
+            # Column I
+            # -------------------------------------------------
 
             destination = text(
                 get_row_position(
@@ -1034,6 +1036,10 @@ def dashboard(
                 )
             )
 
+
+            # =================================================
+            # TOTAL ORDERS
+            # =================================================
 
             if order_no not in (
                 None,
@@ -1048,6 +1054,10 @@ def dashboard(
             order_quantity += quantity
 
 
+            # =================================================
+            # TODAY
+            # =================================================
+
             if row_date == today:
 
                 today_orders += 1
@@ -1059,6 +1069,11 @@ def dashboard(
 
             # =================================================
             # SIZE WISE
+            #
+            # IMPORTANT:
+            # KEY = ONLY SIZE
+            #
+            # Party ko size key me kabhi nahi milaya jayega.
             # =================================================
 
             if size:
@@ -1071,23 +1086,40 @@ def dashboard(
 
                         "orders": 0,
 
-                        "quantity": 0
+                        "quantity": 0,
+
+                        "order_numbers": set()
 
                     }
+
 
                 size_data[size][
                     "orders"
                 ] += 1
+
 
                 size_data[size][
                     "quantity"
                 ] += quantity
 
 
+                if order_no not in (
+                    None,
+                    ""
+                ):
+
+                    size_data[size][
+                        "order_numbers"
+                    ].add(
+                        text(order_no)
+                    )
+
+
             # =================================================
             # PARTY WISE
+            #
             # PARTY
-            #   ART / MATERIAL
+            #   SIZE
             #       DESTINATION
             #           QUANTITY
             # =================================================
@@ -1098,13 +1130,17 @@ def dashboard(
 
                     party_data[party] = {
 
-                        "party": party,
+                        "party":
+                            party,
 
-                        "orders": 0,
+                        "orders":
+                            0,
 
-                        "quantity": 0,
+                        "quantity":
+                            0,
 
-                        "materials": {}
+                        "materials":
+                            {}
 
                     }
 
@@ -1113,12 +1149,17 @@ def dashboard(
                     "orders"
                 ] += 1
 
+
                 party_data[party][
                     "quantity"
                 ] += quantity
 
 
-                material = size or "UNKNOWN"
+                material = (
+                    size
+                    if size
+                    else "UNKNOWN"
+                )
 
 
                 if material not in party_data[
@@ -1153,15 +1194,21 @@ def dashboard(
                     "orders"
                 ] += 1
 
+
                 material_data[
                     "quantity"
                 ] += quantity
 
 
                 destination_name = (
+
                     destination
+
                     if destination
-                    else "NO DESTINATION"
+
+                    else
+                    "NO DESTINATION"
+
                 )
 
 
@@ -1187,14 +1234,17 @@ def dashboard(
                     }
 
 
-                destination_data = material_data[
-                    "destinations"
-                ][destination_name]
+                destination_data = (
+                    material_data[
+                        "destinations"
+                    ][destination_name]
+                )
 
 
                 destination_data[
                     "orders"
                 ] += 1
+
 
                 destination_data[
                     "quantity"
@@ -1216,7 +1266,7 @@ def dashboard(
                 dispatch.append(
                     convert_database_row(
                         item
-                    )["data"]
+                    )
                 )
 
 
@@ -1227,13 +1277,21 @@ def dashboard(
         today_dispatch_quantity = 0
 
 
-        for row in dispatch:
+        for dispatch_item in dispatch:
+
+            row = dispatch_item["row"]
+
+            record = dispatch_item["data"]
+
+
+            # Dashboard dispatch quantity
+            # Keep existing header based logic
 
             quantity = number(
 
                 first_existing(
 
-                    row,
+                    record,
 
                     [
                         "Quantity Pcs.",
@@ -1245,14 +1303,18 @@ def dashboard(
 
             )
 
+
             dispatch_quantity += quantity
 
+
+            # Dashboard today's dispatch
+            # Use Date header when available
 
             row_date = date_only(
 
                 first_existing(
 
-                    row,
+                    record,
 
                     [
                         "Date",
@@ -1316,32 +1378,46 @@ def dashboard(
 
 
         # =================================================
-        # SIZE WISE
+        # SIZE WISE FINAL
         # =================================================
 
-        size_wise = sorted(
+        size_wise = []
 
-            [
 
-                {
+        for item in size_data.values():
 
-                    "size":
-                        item["size"],
+            # Unique order count for this size.
+            # Agar Order No available nahi hai,
+            # row count fallback rahega.
 
-                    "orders":
-                        item["orders"],
+            unique_size_orders = len(
+                item["order_numbers"]
+            )
 
-                    "quantity":
-                        clean_number(
-                            item["quantity"]
-                        )
+            if unique_size_orders == 0:
 
-                }
+                unique_size_orders = (
+                    item["orders"]
+                )
 
-                for item in
-                size_data.values()
 
-            ],
+            size_wise.append({
+
+                "size":
+                    item["size"],
+
+                "orders":
+                    unique_size_orders,
+
+                "quantity":
+                    clean_number(
+                        item["quantity"]
+                    )
+
+            })
+
+
+        size_wise.sort(
 
             key=lambda x:
                 x["quantity"],
@@ -1352,7 +1428,7 @@ def dashboard(
 
 
         # =================================================
-        # PARTY WISE
+        # PARTY WISE FINAL
         # =================================================
 
         party_wise = []
@@ -1473,7 +1549,7 @@ def dashboard(
 
 
         # =================================================
-        # FINAL RESPONSE
+        # FINAL DASHBOARD RESPONSE
         # =================================================
 
         return {
@@ -1582,6 +1658,8 @@ def dashboard(
 
 # =========================================================
 # MONTHLY REPORT - AVAILABLE MONTHS
+#
+# DATE = DISPATCHED ORDERS COLUMN K
 # =========================================================
 
 @app.get("/monthly-report/months")
@@ -1613,25 +1691,20 @@ def monthly_report_months(
                 item
             )
 
-            record = converted[
-                "data"
+            row = converted[
+                "row"
             ]
 
 
+            # =================================================
+            # COLUMN K = DATE
+            # =================================================
+
             row_date = date_only(
-
-                first_existing(
-
-                    record,
-
-                    [
-                        "Date",
-                        "BILL DATE",
-                        "IN/OUT DATE"
-                    ]
-
+                get_row_position(
+                    row,
+                    11
                 )
-
             )
 
 
@@ -1701,6 +1774,12 @@ def monthly_report_months(
 
 # =========================================================
 # MONTHLY REPORT - DAILY PCS DISPATCH
+#
+# EXACT SOURCE:
+#
+# Column K = Date
+# Column M = Type of Material
+# Column F = Quantity
 # =========================================================
 
 @app.get("/monthly-report/daily-pcs-dispatch")
@@ -1782,6 +1861,10 @@ def daily_pcs_dispatch(
 
         matched_rows = 0
 
+        skipped_unknown_material = 0
+
+        skipped_no_date = 0
+
 
         for item in rows:
 
@@ -1796,33 +1879,28 @@ def daily_pcs_dispatch(
                 item
             )
 
-            record = converted[
-                "data"
+            row = converted[
+                "row"
             ]
 
 
-            # ---------------------------------------------
-            # DATE
-            # ---------------------------------------------
+            # =================================================
+            # COLUMN K = DATE
+            # =================================================
 
             row_date = date_only(
 
-                first_existing(
-
-                    record,
-
-                    [
-                        "Date",
-                        "BILL DATE",
-                        "IN/OUT DATE"
-                    ]
-
+                get_row_position(
+                    row,
+                    11
                 )
 
             )
 
 
             if row_date is None:
+
+                skipped_no_date += 1
 
                 continue
 
@@ -1837,22 +1915,15 @@ def daily_pcs_dispatch(
                 continue
 
 
-            # ---------------------------------------------
-            # TYPE OF MATERIAL
-            # ---------------------------------------------
+            # =================================================
+            # COLUMN M = TYPE OF MATERIAL
+            # =================================================
 
             material_type = text(
 
-                first_existing(
-
-                    record,
-
-                    [
-                        "TYPE OF MATERIAL",
-                        "Type Of Material",
-                        "TYPE OF MATERIAL "
-                    ]
-
+                get_row_position(
+                    row,
+                    13
                 )
 
             )
@@ -1872,26 +1943,20 @@ def daily_pcs_dispatch(
 
             if not report_column:
 
+                skipped_unknown_material += 1
+
                 continue
 
 
-            # ---------------------------------------------
-            # QUANTITY
-            # ---------------------------------------------
+            # =================================================
+            # COLUMN F = QUANTITY
+            # =================================================
 
             quantity = number(
 
-                first_existing(
-
-                    record,
-
-                    [
-                        "Quantity Pcs.",
-                        "Quantity",
-                        "QUANTITY",
-                        "QUANTITY IN NOS"
-                    ]
-
+                get_row_position(
+                    row,
+                    6
                 )
 
             )
@@ -2012,6 +2077,25 @@ def daily_pcs_dispatch(
             "matched_dispatch_rows":
                 matched_rows,
 
+            "skipped_unknown_material":
+                skipped_unknown_material,
+
+            "skipped_no_date":
+                skipped_no_date,
+
+            "source_columns": {
+
+                "date":
+                    "K",
+
+                "material":
+                    "M",
+
+                "quantity":
+                    "F"
+
+            },
+
             "last_updated":
                 datetime.now()
                 .astimezone()
@@ -2035,7 +2119,7 @@ def daily_pcs_dispatch(
 
 
 # =========================================================
-# MONTHLY REPORT - CURRENT MONTH SHORTCUT
+# CURRENT MONTH SHORTCUT
 # =========================================================
 
 @app.get("/monthly-report/daily-pcs-dispatch/current")
@@ -2062,12 +2146,9 @@ def current_month_daily_pcs_dispatch(
 
 # =========================================================
 # MATERIAL MAPPING CHECK
+#
+# SOURCE = COLUMN M
 # =========================================================
-#
-# Ye endpoint debugging ke liye hai.
-# Isse pata chalega ki Excel me kaun-kaun se
-# TYPE OF MATERIAL aaye aur kis report column me map hue.
-#
 
 @app.get("/monthly-report/material-mapping")
 def material_mapping(
@@ -2084,6 +2165,7 @@ def material_mapping(
 
         actual_types = {}
 
+
         for item in rows:
 
             if text(
@@ -2097,23 +2179,20 @@ def material_mapping(
                 item
             )
 
-            record = converted[
-                "data"
+            row = converted[
+                "row"
             ]
 
 
+            # =================================================
+            # COLUMN M = TYPE OF MATERIAL
+            # =================================================
+
             material_type = text(
 
-                first_existing(
-
-                    record,
-
-                    [
-                        "TYPE OF MATERIAL",
-                        "Type Of Material",
-                        "TYPE OF MATERIAL "
-                    ]
-
+                get_row_position(
+                    row,
+                    13
                 )
 
             )
@@ -2142,6 +2221,9 @@ def material_mapping(
 
                     "excel_value":
                         material_type,
+
+                    "normalized":
+                        normalized,
 
                     "report_column":
                         mapped_to,
