@@ -118,6 +118,7 @@ MATERIAL_MAPPING = {
 # =========================================================
 
 def text(value):
+
     if value is None:
         return ""
 
@@ -125,6 +126,7 @@ def text(value):
 
 
 def clean_value(value):
+
     if value is None:
         return None
 
@@ -135,7 +137,9 @@ def clean_value(value):
 
 
 def number(value):
+
     try:
+
         if value is None or value == "":
             return 0
 
@@ -146,10 +150,12 @@ def number(value):
         )
 
     except Exception:
+
         return 0
 
 
 def clean_number(value):
+
     value = float(value)
 
     if value.is_integer():
@@ -159,6 +165,7 @@ def clean_number(value):
 
 
 def date_only(value):
+
     if value is None:
         return None
 
@@ -174,9 +181,11 @@ def date_only(value):
     # 2026-08-02T00:00:00
     # 2026-08-02T00:00:00+00:00
     try:
+
         return datetime.fromisoformat(
             value.replace("Z", "+00:00")
         ).date()
+
     except Exception:
         pass
 
@@ -189,11 +198,14 @@ def date_only(value):
     )
 
     for fmt in formats:
+
         try:
+
             return datetime.strptime(
                 value,
                 fmt
             ).date()
+
         except Exception:
             pass
 
@@ -201,11 +213,26 @@ def date_only(value):
 
 
 def first_existing(record, names):
+
     for name in names:
+
         if name in record:
             return record[name]
 
     return None
+
+
+def get_row_position(row, position):
+
+    index = position - 1
+
+    if index < 0:
+        return None
+
+    if index >= len(row):
+        return None
+
+    return row[index]
 
 
 # =========================================================
@@ -259,19 +286,6 @@ def normalize_size(value):
     )
 
     return value
-
-
-def get_row_position(row, position):
-
-    index = position - 1
-
-    if index < 0:
-        return None
-
-    if index >= len(row):
-        return None
-
-    return row[index]
 
 
 # =========================================================
@@ -341,6 +355,7 @@ def verify_token(token):
         return True
 
     except Exception:
+
         return False
 
 
@@ -1149,6 +1164,7 @@ def dashboard(
 
         # =========================================================
         # DISPATCH
+        # RED / CANCELLED ROWS ARE NOT COUNTED
         # =========================================================
 
         dispatch = []
@@ -1159,11 +1175,25 @@ def dashboard(
                 item.get("sheet")
             ) == "Dispatched Orders":
 
-                dispatch.append(
-                    convert_database_row(
-                        item
-                    )
+                converted = convert_database_row(
+                    item
                 )
+
+                dispatch.append({
+
+                    "data":
+                        converted["data"],
+
+                    "row":
+                        converted["row"],
+
+                    "cancelled":
+                        item.get(
+                            "cancelled",
+                            False
+                        ) is True
+
+                })
 
 
         dispatch_quantity = 0
@@ -1172,8 +1202,25 @@ def dashboard(
 
         today_dispatch_quantity = 0
 
+        cancelled_dispatch_rows = 0
+
 
         for dispatch_item in dispatch:
+
+            # =========================================
+            # RED TEXT = CANCELLED
+            # DO NOT COUNT
+            # =========================================
+
+            if dispatch_item.get(
+                "cancelled",
+                False
+            ):
+
+                cancelled_dispatch_rows += 1
+
+                continue
+
 
             row = dispatch_item["row"]
 
@@ -1485,7 +1532,8 @@ def dashboard(
             "dispatch": {
 
                 "total_rows":
-                    len(dispatch),
+                    len(dispatch)
+                    - cancelled_dispatch_rows,
 
                 "total_quantity":
                     clean_number(
@@ -1498,7 +1546,10 @@ def dashboard(
                 "today_quantity":
                     clean_number(
                         today_dispatch_quantity
-                    )
+                    ),
+
+                "cancelled_rows":
+                    cancelled_dispatch_rows
 
             },
 
@@ -1569,6 +1620,19 @@ def monthly_report_months(
             if text(
                 item.get("sheet")
             ) != "Dispatched Orders":
+
+                continue
+
+
+            # =====================================================
+            # RED TEXT = CANCELLED
+            # CANCELLED ROW KA MONTH BHI IGNORE
+            # =====================================================
+
+            if item.get(
+                "cancelled",
+                False
+            ) is True:
 
                 continue
 
@@ -1664,6 +1728,8 @@ def monthly_report_months(
 # F = QUANTITY
 #
 # SAME DATE + SAME MATERIAL = PLUS
+#
+# RED TEXT / CANCELLED = IGNORE
 # =========================================================
 
 @app.get("/monthly-report/daily-pcs-dispatch")
@@ -1736,6 +1802,8 @@ def daily_pcs_dispatch(
 
         matched_rows = 0
 
+        skipped_cancelled_rows = 0
+
         skipped_unknown_material = 0
 
         skipped_no_date = 0
@@ -1750,6 +1818,21 @@ def daily_pcs_dispatch(
             if text(
                 item.get("sheet")
             ) != "Dispatched Orders":
+
+                continue
+
+
+            # =====================================================
+            # RED TEXT = CANCELLED
+            # DO NOT COUNT
+            # =====================================================
+
+            if item.get(
+                "cancelled",
+                False
+            ) is True:
+
+                skipped_cancelled_rows += 1
 
                 continue
 
@@ -1959,6 +2042,9 @@ def daily_pcs_dispatch(
 
             "matched_dispatch_rows":
                 matched_rows,
+
+            "skipped_cancelled_rows":
+                skipped_cancelled_rows,
 
             "skipped_unknown_material":
                 skipped_unknown_material,
