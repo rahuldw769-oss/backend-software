@@ -45,8 +45,6 @@ TABLE = "excel_rows"
 
 # =========================================================
 # MONTHLY REPORT MATERIAL COLUMNS
-#
-# EXACT REQUIRED FORMAT
 # =========================================================
 
 MONTHLY_MATERIALS = [
@@ -68,14 +66,9 @@ MONTHLY_MATERIALS = [
 
 # =========================================================
 # MATERIAL MAPPING
-#
-# NORMALIZED MATERIAL -> REPORT COLUMN
-#
-# PCS / KG / KGS / NOS etc. are removed BEFORE mapping.
 # =========================================================
 
 MATERIAL_MAPPING = {
-
     "SLIPSHEET": "SLIPSHEET",
     "SLIP SHEET": "SLIPSHEET",
 
@@ -125,7 +118,6 @@ MATERIAL_MAPPING = {
 # =========================================================
 
 def text(value):
-
     if value is None:
         return ""
 
@@ -133,7 +125,6 @@ def text(value):
 
 
 def clean_value(value):
-
     if value is None:
         return None
 
@@ -144,9 +135,7 @@ def clean_value(value):
 
 
 def number(value):
-
     try:
-
         if value is None or value == "":
             return 0
 
@@ -157,12 +146,10 @@ def number(value):
         )
 
     except Exception:
-
         return 0
 
 
 def clean_number(value):
-
     value = float(value)
 
     if value.is_integer():
@@ -172,7 +159,6 @@ def clean_number(value):
 
 
 def date_only(value):
-
     if value is None:
         return None
 
@@ -196,9 +182,7 @@ def date_only(value):
     )
 
     for fmt in formats:
-
         try:
-
             return datetime.strptime(
                 value,
                 fmt
@@ -207,13 +191,10 @@ def date_only(value):
         except Exception:
             pass
 
-    # Excel serial date fallback
     try:
-
         serial = float(value)
 
         if 1 <= serial <= 60000:
-
             base = datetime(1899, 12, 30)
 
             return (
@@ -228,11 +209,8 @@ def date_only(value):
 
 
 def first_existing(record, names):
-
     for name in names:
-
         if name in record:
-
             return record[name]
 
     return None
@@ -240,35 +218,6 @@ def first_existing(record, names):
 
 # =========================================================
 # MATERIAL NORMALIZATION
-#
-# IMPORTANT:
-#
-# PCS
-# PC
-# KG
-# KGS
-# NOS
-# NO
-# KILOGRAM
-# KILOGRAMS
-#
-# ko material name ka part nahi maana jayega.
-#
-# Example:
-#
-# SLIP SHEET PCS
-# SLIP SHEET
-# SLIP-SHEET PCS
-#
-# sab -> SLIPSHEET
-#
-# Example:
-#
-# PAPER SCRAP KG
-# PAPER SCRAP KGS
-# PAPER-SCRAP
-#
-# sab -> PAPERSCRAP
 # =========================================================
 
 def normalize_material(value):
@@ -340,13 +289,10 @@ def get_row_position(row, position):
 def make_token(username):
 
     payload = {
-
         "username": username,
-
         "exp": int(
             datetime.now().timestamp()
         ) + 86400
-
     }
 
     raw = json.dumps(
@@ -403,7 +349,6 @@ def verify_token(token):
         return True
 
     except Exception:
-
         return False
 
 
@@ -451,15 +396,11 @@ def supabase_headers():
         )
 
     return {
-
         "apikey": SUPABASE_KEY,
-
         "Authorization":
             f"Bearer {SUPABASE_KEY}",
-
         "Content-Type":
             "application/json"
-
     }
 
 
@@ -475,7 +416,6 @@ def get_all_rows():
     all_rows = []
 
     offset = 0
-
     page_size = 1000
 
     while True:
@@ -920,10 +860,6 @@ def dashboard(
 
         today = datetime.now().date()
 
-        # =================================================
-        # ORDERS
-        # =================================================
-
         orders = []
 
         for item in rows:
@@ -960,10 +896,6 @@ def dashboard(
         party_data = {}
 
 
-        # =================================================
-        # ORDER PROCESSING
-        # =================================================
-
         for order_item in orders:
 
             row = order_item["row"]
@@ -971,19 +903,11 @@ def dashboard(
             record = order_item["data"]
 
 
-            # -------------------------------------------------
-            # ORDER NO = COLUMN A
-            # -------------------------------------------------
-
             order_no = get_row_position(
                 row,
                 1
             )
 
-
-            # -------------------------------------------------
-            # PARTY = COLUMN C
-            # -------------------------------------------------
 
             party = text(
                 get_row_position(
@@ -992,10 +916,6 @@ def dashboard(
                 )
             )
 
-
-            # -------------------------------------------------
-            # SIZE = COLUMN D
-            # -------------------------------------------------
 
             raw_size = get_row_position(
                 row,
@@ -1007,10 +927,6 @@ def dashboard(
             )
 
 
-            # -------------------------------------------------
-            # QUANTITY = COLUMN F
-            # -------------------------------------------------
-
             quantity = number(
                 get_row_position(
                     row,
@@ -1018,10 +934,6 @@ def dashboard(
                 )
             )
 
-
-            # -------------------------------------------------
-            # DATE
-            # -------------------------------------------------
 
             row_date = date_only(
 
@@ -1039,10 +951,6 @@ def dashboard(
             )
 
 
-            # -------------------------------------------------
-            # DESTINATION = COLUMN I
-            # -------------------------------------------------
-
             destination = text(
                 get_row_position(
                     row,
@@ -1050,10 +958,6 @@ def dashboard(
                 )
             )
 
-
-            # =================================================
-            # TOTAL ORDERS
-            # =================================================
 
             if order_no not in (
                 None,
@@ -1068,10 +972,6 @@ def dashboard(
             order_quantity += quantity
 
 
-            # =================================================
-            # TODAY
-            # =================================================
-
             if row_date == today:
 
                 today_orders += 1
@@ -1080,10 +980,6 @@ def dashboard(
                     quantity
                 )
 
-
-            # =================================================
-            # SIZE WISE
-            # =================================================
 
             if size:
 
@@ -1125,12 +1021,7 @@ def dashboard(
 
 
             # =================================================
-            # PARTY WISE
-            #
-            # PARTY
-            #   DESTINATION
-            #       SIZE
-            #           QUANTITY
+            # PARTY -> DESTINATION -> SIZE -> QUANTITY
             # =================================================
 
             if party:
@@ -1176,10 +1067,6 @@ def dashboard(
                 )
 
 
-                # =================================================
-                # DESTINATION
-                # =================================================
-
                 if destination_name not in (
                     party_data[
                         party
@@ -1221,10 +1108,6 @@ def dashboard(
                     "quantity"
                 ] += quantity
 
-
-                # =================================================
-                # SIZE INSIDE DESTINATION
-                # =================================================
 
                 size_name = (
                     size
@@ -1272,9 +1155,9 @@ def dashboard(
                 ] += quantity
 
 
-        # =================================================
+        # =========================================================
         # DISPATCH
-        # =================================================
+        # =========================================================
 
         dispatch = []
 
@@ -1351,9 +1234,9 @@ def dashboard(
                 )
 
 
-        # =================================================
+        # =========================================================
         # HOLD ORDERS
-        # =================================================
+        # =========================================================
 
         hold = []
 
@@ -1392,9 +1275,9 @@ def dashboard(
             )
 
 
-        # =================================================
+        # =========================================================
         # SIZE WISE FINAL
-        # =================================================
+        # =========================================================
 
         size_wise = []
 
@@ -1438,14 +1321,9 @@ def dashboard(
         )
 
 
-        # =================================================
+        # =========================================================
         # PARTY WISE FINAL
-        #
-        # PARTY
-        #   DESTINATION
-        #       SIZE
-        #           QUANTITY
-        # =================================================
+        # =========================================================
 
         party_wise = []
 
@@ -1566,9 +1444,9 @@ def dashboard(
         )
 
 
-        # =================================================
+        # =========================================================
         # FINAL DASHBOARD RESPONSE
-        # =================================================
+        # =========================================================
 
         return {
 
@@ -1676,8 +1554,6 @@ def dashboard(
 
 # =========================================================
 # MONTHLY REPORT - AVAILABLE MONTHS
-#
-# DATE = DISPATCHED ORDERS COLUMN K
 # =========================================================
 
 @app.get("/monthly-report/months")
@@ -1714,9 +1590,7 @@ def monthly_report_months(
             ]
 
 
-            # =================================================
             # COLUMN K = DATE
-            # =================================================
 
             row_date = date_only(
                 get_row_position(
@@ -1793,8 +1667,6 @@ def monthly_report_months(
 # =========================================================
 # MONTHLY REPORT - DAILY PCS DISPATCH
 #
-# EXACT SOURCE:
-#
 # K = DATE
 # M = MATERIAL
 # F = QUANTITY
@@ -1842,22 +1714,17 @@ def daily_pcs_dispatch(
         rows = get_all_rows()
 
 
-        # =================================================
-        # DAYS IN MONTH
-        # =================================================
-
         days_in_month = calendar.monthrange(
             year,
             month
         )[1]
 
 
-        # =================================================
-        # EMPTY DAILY DATA
-        # =================================================
+        # =========================================================
+        # DAILY DATA
+        # =========================================================
 
         daily_data = {}
-
 
         for day_number in range(
             1,
@@ -1865,12 +1732,8 @@ def daily_pcs_dispatch(
         ):
 
             daily_data[day_number] = {
-
-                "date":
-                    day_number
-
+                "date": day_number
             }
-
 
             for material in MONTHLY_MATERIALS:
 
@@ -1879,16 +1742,16 @@ def daily_pcs_dispatch(
                 ] = 0
 
 
-        # =================================================
-        # READ DISPATCHED ORDERS
-        # =================================================
-
         matched_rows = 0
 
         skipped_unknown_material = 0
 
         skipped_no_date = 0
 
+
+        # =========================================================
+        # READ DISPATCHED ORDERS
+        # =========================================================
 
         for item in rows:
 
@@ -1908,9 +1771,9 @@ def daily_pcs_dispatch(
             ]
 
 
-            # =================================================
-            # COLUMN K = DATE
-            # =================================================
+            # =====================================================
+            # K = DATE
+            # =====================================================
 
             row_date = date_only(
 
@@ -1929,23 +1792,16 @@ def daily_pcs_dispatch(
                 continue
 
 
-            # =================================================
-            # YEAR + MONTH FILTER
-            # =================================================
-
             if row_date.year != year:
-
                 continue
-
 
             if row_date.month != month:
-
                 continue
 
 
-            # =================================================
-            # COLUMN M = MATERIAL
-            # =================================================
+            # =====================================================
+            # M = MATERIAL
+            # =====================================================
 
             material_type = text(
 
@@ -1964,29 +1820,14 @@ def daily_pcs_dispatch(
                 continue
 
 
-            # =================================================
-            # NORMALIZE MATERIAL
-            # =================================================
-
             normalized = normalize_material(
                 material_type
             )
 
 
-            # =================================================
-            # SPECIAL NORMALIZATION
-            #
-            # TISSUE PAPER / NAPKIN
-            # =================================================
-
-            if normalized == "TISSUE PAPER NAPKIN":
-
-                normalized = "TISSUE PAPER NAPKIN"
-
-
-            # =================================================
-            # MAP TO REPORT COLUMN
-            # =================================================
+            # =====================================================
+            # MAP MATERIAL
+            # =====================================================
 
             report_column = (
                 MATERIAL_MAPPING.get(
@@ -2002,9 +1843,9 @@ def daily_pcs_dispatch(
                 continue
 
 
-            # =================================================
-            # COLUMN F = QUANTITY
-            # =================================================
+            # =====================================================
+            # F = QUANTITY
+            # =====================================================
 
             quantity = number(
 
@@ -2016,11 +1857,9 @@ def daily_pcs_dispatch(
             )
 
 
-            # =================================================
-            # SAME DATE + SAME MATERIAL
-            #
-            # AUTOMATIC PLUS
-            # =================================================
+            # =====================================================
+            # SAME DATE + SAME MATERIAL = PLUS
+            # =====================================================
 
             daily_data[
                 row_date.day
@@ -2032,22 +1871,18 @@ def daily_pcs_dispatch(
             matched_rows += 1
 
 
-        # =================================================
+        # =========================================================
         # TOTAL
-        # =================================================
+        # =========================================================
 
         total = {
-
-            "date":
-                "TOTAL"
-
+            "date": "TOTAL"
         }
 
 
         for material in MONTHLY_MATERIALS:
 
             value = 0
-
 
             for day_number in daily_data:
 
@@ -2059,15 +1894,14 @@ def daily_pcs_dispatch(
 
                 )
 
-
             total[material] = clean_number(
                 value
             )
 
 
-        # =================================================
-        # CLEAN DAILY DATA
-        # =================================================
+        # =========================================================
+        # DAYS
+        # =========================================================
 
         days = []
 
@@ -2078,10 +1912,7 @@ def daily_pcs_dispatch(
         ):
 
             item = {
-
-                "date":
-                    day_number
-
+                "date": day_number
             }
 
 
@@ -2099,9 +1930,9 @@ def daily_pcs_dispatch(
             days.append(item)
 
 
-        # =================================================
-        # MONTH TITLE
-        # =================================================
+        # =========================================================
+        # TITLE
+        # =========================================================
 
         month_title = (
 
@@ -2206,8 +2037,6 @@ def current_month_daily_pcs_dispatch(
 
 # =========================================================
 # MATERIAL MAPPING CHECK
-#
-# SOURCE = COLUMN M
 # =========================================================
 
 @app.get("/monthly-report/material-mapping")
@@ -2244,9 +2073,7 @@ def material_mapping(
             ]
 
 
-            # =================================================
-            # COLUMN M = TYPE OF MATERIAL
-            # =================================================
+            # M = TYPE OF MATERIAL
 
             material_type = text(
 
@@ -2259,7 +2086,6 @@ def material_mapping(
 
 
             if not material_type:
-
                 continue
 
 
