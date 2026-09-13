@@ -1,2225 +1,625 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI,HTTPException,Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPBearer,HTTPAuthorizationCredentials
+from datetime import datetime,date
+import os,hmac,hashlib,base64,json,requests,calendar
 
-from datetime import datetime, date, timedelta
-import os
-import hmac
-import hashlib
-import base64
-import json
-import requests
-import calendar
+app=FastAPI(title="Rahul Software API")
+app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_credentials=True,allow_methods=["*"],allow_headers=["*"])
+security=HTTPBearer(auto_error=False)
 
+USERNAME=os.getenv("RAHUL_USERNAME","rahul")
+PASSWORD=os.getenv("RAHUL_PASSWORD","rahul123")
+SECRET=os.getenv("RAHUL_SECRET","change-this-secret")
+SUPABASE_URL=os.getenv("SUPABASE_URL")
+SUPABASE_KEY=os.getenv("SUPABASE_KEY")
+TABLE="excel_rows"
 
-# =========================================================
-# APP
-# =========================================================
-
-app = FastAPI(title="Rahul Software API")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-security = HTTPBearer(auto_error=False)
-
-
-# =========================================================
-# ENVIRONMENT VARIABLES
-# =========================================================
-
-USERNAME = os.getenv("RAHUL_USERNAME", "rahul")
-PASSWORD = os.getenv("RAHUL_PASSWORD", "rahul123")
-SECRET = os.getenv("RAHUL_SECRET", "change-this-secret")
-
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-
-TABLE = "excel_rows"
-
-
-# =========================================================
-# MONTHLY REPORT MATERIAL COLUMNS
-# =========================================================
-
-MONTHLY_MATERIALS = [
-    "SLIPSHEET",
-    "FRESCO PAD",
-    "M FOLD",
-    "CORE PIPE SCRAP",
-    "PAPER SCRAP",
-    "TOILET ROLL",
-    "KRAFT PAPER",
-    "PET GRIPSHEET",
-    "TISSUE PAPER/   NAPKIN",
-    "KITCHEN ROLL",
-    "PLASTIC SHEET",
-    "JRT",
-    "Z FOLD",
+MONTHLY_MATERIALS=[
+"SLIPSHEET","FRESCO PAD","M FOLD","CORE PIPE SCRAP","PAPER SCRAP",
+"TOILET ROLL","KRAFT PAPER","PET GRIPSHEET","TISSUE PAPER/   NAPKIN",
+"KITCHEN ROLL","PLASTIC SHEET","JRT","Z FOLD"
 ]
 
-
-# =========================================================
-# MATERIAL MAPPING
-# =========================================================
-
-MATERIAL_MAPPING = {
-    "SLIPSHEET": "SLIPSHEET",
-    "SLIP SHEET": "SLIPSHEET",
-
-    "FRESCOPAD": "FRESCO PAD",
-    "FRESCO PAD": "FRESCO PAD",
-
-    "MFOLD": "M FOLD",
-    "M FOLD": "M FOLD",
-
-    "COREPIPESCRAP": "CORE PIPE SCRAP",
-    "CORE PIPE SCRAP": "CORE PIPE SCRAP",
-
-    "PAPERSCRAP": "PAPER SCRAP",
-    "PAPER SCRAP": "PAPER SCRAP",
-
-    "TOILETROLL": "TOILET ROLL",
-    "TOILET ROLL": "TOILET ROLL",
-
-    "KRAFTPAPER": "KRAFT PAPER",
-    "KRAFT PAPER": "KRAFT PAPER",
-
-    "PETGRIPSHEET": "PET GRIPSHEET",
-    "PET GRIP SHEET": "PET GRIPSHEET",
-    "PETGRIP SHEET": "PET GRIPSHEET",
-
-    "NAPKIN": "TISSUE PAPER/   NAPKIN",
-    "TISSUEPAPER": "TISSUE PAPER/   NAPKIN",
-    "TISSUE PAPER": "TISSUE PAPER/   NAPKIN",
-    "TISSUEPAPERNAPKIN": "TISSUE PAPER/   NAPKIN",
-    "TISSUE PAPER NAPKIN": "TISSUE PAPER/   NAPKIN",
-
-    "KITCHENROLL": "KITCHEN ROLL",
-    "KITCHEN ROLL": "KITCHEN ROLL",
-
-    "PLASTICSHEET": "PLASTIC SHEET",
-    "PLASTIC SHEET": "PLASTIC SHEET",
-
-    "JRT": "JRT",
-
-    "ZFOLD": "Z FOLD",
-    "Z FOLD": "Z FOLD",
+MATERIAL_MAPPING={
+"SLIPSHEET":"SLIPSHEET","SLIP SHEET":"SLIPSHEET",
+"FRESCOPAD":"FRESCO PAD","FRESCO PAD":"FRESCO PAD",
+"MFOLD":"M FOLD","M FOLD":"M FOLD",
+"COREPIPESCRAP":"CORE PIPE SCRAP","CORE PIPE SCRAP":"CORE PIPE SCRAP",
+"PAPERSCRAP":"PAPER SCRAP","PAPER SCRAP":"PAPER SCRAP",
+"TOILETROLL":"TOILET ROLL","TOILET ROLL":"TOILET ROLL",
+"KRAFTPAPER":"KRAFT PAPER","KRAFT PAPER":"KRAFT PAPER",
+"PETGRIPSHEET":"PET GRIPSHEET","PET GRIP SHEET":"PET GRIPSHEET","PETGRIP SHEET":"PET GRIPSHEET",
+"NAPKIN":"TISSUE PAPER/   NAPKIN","TISSUEPAPER":"TISSUE PAPER/   NAPKIN",
+"TISSUE PAPER":"TISSUE PAPER/   NAPKIN","TISSUEPAPERNAPKIN":"TISSUE PAPER/   NAPKIN",
+"TISSUE PAPER NAPKIN":"TISSUE PAPER/   NAPKIN",
+"KITCHENROLL":"KITCHEN ROLL","KITCHEN ROLL":"KITCHEN ROLL",
+"PLASTICSHEET":"PLASTIC SHEET","PLASTIC SHEET":"PLASTIC SHEET",
+"JRT":"JRT","ZFOLD":"Z FOLD","Z FOLD":"Z FOLD"
 }
 
+def text(v):
+    return "" if v is None else str(v).strip()
 
-# =========================================================
-# BASIC HELPERS
-# =========================================================
-
-def text(value):
-
-    if value is None:
-        return ""
-
-    return str(value).strip()
-
-
-def clean_value(value):
-
-    if value is None:
-        return None
-
-    if isinstance(value, (datetime, date)):
-        return value.isoformat()
-
-    return value
-
-
-def number(value):
-
+def number(v):
     try:
-
-        if value is None or value == "":
-            return 0
-
-        return float(
-            str(value)
-            .replace(",", "")
-            .strip()
-        )
-
-    except Exception:
-
+        return 0 if v in (None,"") else float(str(v).replace(",","").strip())
+    except:
         return 0
 
+def clean_number(v):
+    v=float(v)
+    return int(v) if v.is_integer() else round(v,2)
 
-def clean_number(value):
-
-    value = float(value)
-
-    if value.is_integer():
-        return int(value)
-
-    return round(value, 2)
-
-
-def date_only(value):
-
-    if value is None:
-        return None
-
-    if isinstance(value, datetime):
-        return value.date()
-
-    if isinstance(value, date):
-        return value
-
-    value = str(value).strip()
-
-    # ISO datetime:
-    # 2026-08-02T00:00:00
-    # 2026-08-02T00:00:00+00:00
-    try:
-
-        return datetime.fromisoformat(
-            value.replace("Z", "+00:00")
-        ).date()
-
-    except Exception:
-        pass
-
-    formats = (
-        "%Y-%m-%d",
-        "%d-%m-%Y",
-        "%d/%m/%Y",
-        "%m/%d/%Y",
-        "%d.%m.%Y",
-    )
-
-    for fmt in formats:
-
-        try:
-
-            return datetime.strptime(
-                value,
-                fmt
-            ).date()
-
-        except Exception:
-            pass
-
+def date_only(v):
+    if v is None:return None
+    if isinstance(v,datetime):return v.date()
+    if isinstance(v,date):return v
+    s=str(v).strip()
+    try:return datetime.fromisoformat(s.replace("Z","+00:00")).date()
+    except:pass
+    for f in ("%Y-%m-%d","%d-%m-%Y","%d/%m/%Y","%m/%d/%Y","%d.%m.%Y"):
+        try:return datetime.strptime(s,f).date()
+        except:pass
     return None
 
-
-def first_existing(record, names):
-
-    for name in names:
-
-        if name in record:
-            return record[name]
-
+def first_existing(r,names):
+    for n in names:
+        if n in r:return r[n]
     return None
 
+def pos(row,n):
+    return row[n-1] if 0<n<=len(row) else None
 
-def get_row_position(row, position):
+def normalize_material(v):
+    s=text(v).upper()
+    s=s.replace("\u00a0"," ").replace("\t"," ").replace("-"," ").replace("_"," ")
+    s=s.replace("/"," ").replace("\\"," ").replace("("," ").replace(")"," ")
+    remove={"PCS","PC","KG","KGS","NOS","NO","KILOGRAM","KILOGRAMS"}
+    return " ".join(x for x in s.split() if x not in remove)
 
-    index = position - 1
+def normalize_size(v):
+    return " ".join(text(v).split())
 
-    if index < 0:
-        return None
+def make_token(user):
+    payload={"username":user,"exp":int(datetime.now().timestamp())+86400}
+    raw=json.dumps(payload,separators=(",",":")).encode()
+    enc=base64.urlsafe_b64encode(raw).decode().rstrip("=")
+    sig=hmac.new(SECRET.encode(),enc.encode(),hashlib.sha256).hexdigest()
+    return enc+"."+sig
 
-    if index >= len(row):
-        return None
-
-    return row[index]
-
-
-# =========================================================
-# MATERIAL NORMALIZATION
-# =========================================================
-
-def normalize_material(value):
-
-    value = text(value).upper()
-
-    value = (
-        value
-        .replace("\u00a0", " ")
-        .replace("\t", " ")
-        .replace("-", " ")
-        .replace("_", " ")
-        .replace("/", " ")
-        .replace("\\", " ")
-        .replace("(", " ")
-        .replace(")", " ")
-    )
-
-    parts = value.split()
-
-    units_to_remove = {
-        "PCS",
-        "PC",
-        "KG",
-        "KGS",
-        "NOS",
-        "NO",
-        "KILOGRAM",
-        "KILOGRAMS",
-    }
-
-    parts = [
-        part
-        for part in parts
-        if part not in units_to_remove
-    ]
-
-    return " ".join(parts)
-
-
-def normalize_size(value):
-
-    value = text(value)
-
-    value = " ".join(
-        value.split()
-    )
-
-    return value
-
-
-# =========================================================
-# TOKEN AUTHENTICATION
-# =========================================================
-
-def make_token(username):
-
-    payload = {
-        "username": username,
-        "exp": int(
-            datetime.now().timestamp()
-        ) + 86400
-    }
-
-    raw = json.dumps(
-        payload,
-        separators=(",", ":")
-    ).encode()
-
-    encoded = base64.urlsafe_b64encode(
-        raw
-    ).decode().rstrip("=")
-
-    signature = hmac.new(
-        SECRET.encode(),
-        encoded.encode(),
-        hashlib.sha256
-    ).hexdigest()
-
-    return encoded + "." + signature
-
-
-def verify_token(token):
-
+def verify_token(t):
     try:
-
-        encoded, signature = token.split(".", 1)
-
-        expected = hmac.new(
-            SECRET.encode(),
-            encoded.encode(),
-            hashlib.sha256
-        ).hexdigest()
-
-        if not hmac.compare_digest(
-            signature,
-            expected
-        ):
-            return False
-
-        padding = "=" * (-len(encoded) % 4)
-
-        raw = base64.urlsafe_b64decode(
-            encoded + padding
-        )
-
-        payload = json.loads(
-            raw.decode()
-        )
-
-        if payload["exp"] < int(
-            datetime.now().timestamp()
-        ):
-            return False
-
-        return True
-
-    except Exception:
-
+        enc,sig=t.split(".",1)
+        expected=hmac.new(SECRET.encode(),enc.encode(),hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig,expected):return False
+        raw=base64.urlsafe_b64decode(enc+"="*(-len(enc)%4))
+        return json.loads(raw.decode())["exp"]>=int(datetime.now().timestamp())
+    except:
         return False
 
-
-def require_auth(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
-):
-
-    if credentials is None:
-
-        raise HTTPException(
-            status_code=401,
-            detail="Authentication required"
-        )
-
-    if credentials.scheme.lower() != "bearer":
-
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid authentication"
-        )
-
-    if not verify_token(
-        credentials.credentials
-    ):
-
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or expired token"
-        )
-
-    return True
-
-
-# =========================================================
-# SUPABASE
-# =========================================================
+def require_auth(c:HTTPAuthorizationCredentials=Depends(security)):
+    if c is None or c.scheme.lower()!="bearer" or not verify_token(c.credentials):
+        raise HTTPException(401,"Authentication required")
 
 def supabase_headers():
-
     if not SUPABASE_URL or not SUPABASE_KEY:
-
-        raise HTTPException(
-            status_code=500,
-            detail="Supabase environment variables missing"
-        )
-
+        raise HTTPException(500,"Supabase environment variables missing")
     return {
-        "apikey": SUPABASE_KEY,
-        "Authorization":
-            f"Bearer {SUPABASE_KEY}",
-        "Content-Type":
-            "application/json"
+        "apikey":SUPABASE_KEY,
+        "Authorization":f"Bearer {SUPABASE_KEY}",
+        "Content-Type":"application/json"
     }
-
 
 def get_all_rows():
-
-    url = (
-        f"{SUPABASE_URL}"
-        f"/rest/v1/{TABLE}"
-    )
-
-    headers = supabase_headers()
-
-    all_rows = []
-
-    offset = 0
-    page_size = 1000
-
+    url=f"{SUPABASE_URL}/rest/v1/{TABLE}"
+    result=[]
+    offset=0
     while True:
-
-        response = requests.get(
-
+        r=requests.get(
             url,
-
-            headers=headers,
-
-            params={
-                "select": "*",
-                "offset": offset,
-                "limit": page_size
-            },
-
+            headers=supabase_headers(),
+            params={"select":"*","offset":offset,"limit":1000},
             timeout=60
-
         )
-
-        if not response.ok:
-
-            raise HTTPException(
-
-                status_code=500,
-
-                detail=(
-                    "Supabase read error: "
-                    + response.text
-                )
-
-            )
-
-        rows = response.json()
-
-        if not rows:
-            break
-
-        all_rows.extend(rows)
-
-        if len(rows) < page_size:
-            break
-
-        offset += page_size
-
-    return all_rows
-
-
-# =========================================================
-# DATABASE ROW CONVERSION
-# =========================================================
+        if not r.ok:
+            raise HTTPException(500,"Supabase read error: "+r.text)
+        rows=r.json()
+        if not rows:break
+        result.extend(rows)
+        if len(rows)<1000:break
+        offset+=1000
+    return result
 
 def convert_database_row(item):
-
-    sheet_name = item.get(
-        "sheet",
-        ""
-    )
-
-    headers = item.get(
-        "headers",
-        []
-    )
-
-    row = item.get(
-        "row",
-        []
-    )
-
-    if not isinstance(headers, list):
-        headers = []
-
-    if not isinstance(row, list):
-        row = []
-
+    headers=item.get("headers",[])
+    row=item.get("row",[])
+    if not isinstance(headers,list):headers=[]
+    if not isinstance(row,list):row=[]
     return {
-
-        "sheet": sheet_name,
-
-        "headers": headers,
-
-        "row": row,
-
-        "data": {
-            str(headers[i]):
-                row[i] if i < len(row) else None
-            for i in range(len(headers))
-        }
-
+        "sheet":item.get("sheet",""),
+        "headers":headers,
+        "row":row,
+        "data":{str(headers[i]):row[i] if i<len(row) else None for i in range(len(headers))}
     }
-
-
-# =========================================================
-# HOME
-# =========================================================
 
 @app.get("/")
 def home():
-
-    return {
-
-        "status": "online",
-
-        "message":
-            "Rahul Software API is running",
-
-        "database":
-            "Supabase"
-
-    }
-
-
-# =========================================================
-# LOGIN
-# =========================================================
+    return {"status":"online","message":"Rahul Software API is running","database":"Supabase"}
 
 @app.post("/login")
-def login(data: dict):
-
-    username = text(
-        data.get("username")
-    )
-
-    password = text(
-        data.get("password")
-    )
-
-    if (
-        hmac.compare_digest(
-            username,
-            USERNAME
-        )
-        and
-        hmac.compare_digest(
-            password,
-            PASSWORD
-        )
-    ):
-
-        token = make_token(
-            username
-        )
-
-        return {
-
-            "status": "success",
-
-            "access_token": token,
-
-            "token": token,
-
-            "token_type": "bearer"
-
-        }
-
-    raise HTTPException(
-
-        status_code=401,
-
-        detail=
-            "Invalid username or password"
-
-    )
-
-
-# =========================================================
-# SHEETS
-# =========================================================
+def login(data:dict):
+    username=text(data.get("username"))
+    password=text(data.get("password"))
+    if hmac.compare_digest(username,USERNAME) and hmac.compare_digest(password,PASSWORD):
+        t=make_token(username)
+        return {"status":"success","access_token":t,"token":t,"token_type":"bearer"}
+    raise HTTPException(401,"Invalid username or password")
 
 @app.get("/sheets")
-def sheets(
-    authenticated: bool = Depends(
-        require_auth
-    )
-):
-
-    try:
-
-        rows = get_all_rows()
-
-        names = set()
-
-        for item in rows:
-
-            sheet_name = text(
-                item.get("sheet")
-            )
-
-            if sheet_name:
-                names.add(sheet_name)
-
-        names = sorted(names)
-
-        return {
-
-            "count": len(names),
-
-            "sheets": names
-
-        }
-
-    except HTTPException:
-        raise
-
-    except Exception as e:
-
-        raise HTTPException(
-
-            status_code=500,
-
-            detail=str(e)
-
-        )
-
-
-# =========================================================
-# SINGLE SHEET
-# =========================================================
+def sheets(authenticated:bool=Depends(require_auth)):
+    names={text(i.get("sheet")) for i in get_all_rows() if text(i.get("sheet"))}
+    return {"count":len(names),"sheets":sorted(names)}
 
 @app.get("/sheet/{sheet_name}")
-def get_sheet(
-
-    sheet_name: str,
-
-    limit: int = 100,
-
-    authenticated: bool = Depends(
-        require_auth
-    )
-
-):
-
-    try:
-
-        rows = get_all_rows()
-
-        results = []
-
-        headers = []
-
-        for item in rows:
-
-            if text(
-                item.get("sheet")
-            ) != sheet_name:
-
-                continue
-
-            converted = convert_database_row(
-                item
-            )
-
-            if not headers:
-
-                headers = converted[
-                    "headers"
-                ]
-
-            results.append(
-                converted["data"]
-            )
-
-        if not results and not headers:
-
-            raise HTTPException(
-
-                status_code=404,
-
-                detail=
-                    f"Sheet '{sheet_name}' not found"
-
-            )
-
-        limit = max(
-            1,
-            min(
-                int(limit),
-                1000
-            )
-        )
-
-        results = results[:limit]
-
-        return {
-
-            "sheet": sheet_name,
-
-            "headers": headers,
-
-            "count": len(results),
-
-            "data": results
-
-        }
-
-    except HTTPException:
-        raise
-
-    except Exception as e:
-
-        raise HTTPException(
-
-            status_code=500,
-
-            detail=str(e)
-
-        )
-
-
-# =========================================================
-# GLOBAL SEARCH
-# =========================================================
+def get_sheet(sheet_name:str,limit:int=100,authenticated:bool=Depends(require_auth)):
+    result=[];headers=[]
+    for item in get_all_rows():
+        if text(item.get("sheet"))==sheet_name:
+            c=convert_database_row(item)
+            if not headers:headers=c["headers"]
+            result.append(c["data"])
+    if not result and not headers:
+        raise HTTPException(404,f"Sheet '{sheet_name}' not found")
+    limit=max(1,min(int(limit),1000))
+    return {"sheet":sheet_name,"headers":headers,"count":min(len(result),limit),"data":result[:limit]}
 
 @app.get("/search")
-def search(
-
-    q: str,
-
-    sheet: str = "ALL SHEETS",
-
-    authenticated: bool = Depends(
-        require_auth
-    )
-
-):
-
-    try:
-
-        search_text = text(q).lower()
-
-        if not search_text:
-
-            return {
-
-                "query": q,
-
-                "sheet": sheet,
-
-                "count": 0,
-
-                "results": []
-
-            }
-
-        rows = get_all_rows()
-
-        results = []
-
-        for item in rows:
-
-            sheet_name = text(
-                item.get("sheet")
-            )
-
-            if (
-                sheet != "ALL SHEETS"
-                and sheet_name != sheet
-            ):
-
-                continue
-
-            converted = convert_database_row(
-                item
-            )
-
-            record = converted[
-                "data"
-            ]
-
-            found = False
-
-            for value in record.values():
-
-                if (
-                    search_text
-                    in text(value).lower()
-                ):
-
-                    found = True
-                    break
-
-            if found:
-
-                results.append({
-
-                    "sheet":
-                        sheet_name,
-
-                    "headers":
-                        converted["headers"],
-
-                    "row":
-                        converted["row"],
-
-                    "data":
-                        record
-
-                })
-
-        return {
-
-            "query": q,
-
-            "sheet": sheet,
-
-            "count": len(results),
-
-            "results": results
-
-        }
-
-    except HTTPException:
-        raise
-
-    except Exception as e:
-
-        raise HTTPException(
-
-            status_code=500,
-
-            detail=str(e)
-
-        )
-
-
-# =========================================================
-# DASHBOARD
-# =========================================================
+def search(q:str,sheet:str="ALL SHEETS",authenticated:bool=Depends(require_auth)):
+    q=text(q).lower()
+    if not q:return {"query":q,"sheet":sheet,"count":0,"results":[]}
+    result=[]
+    for item in get_all_rows():
+        sn=text(item.get("sheet"))
+        if sheet!="ALL SHEETS" and sn!=sheet:continue
+        c=convert_database_row(item)
+        if any(q in text(v).lower() for v in c["data"].values()):
+            result.append({
+                "sheet":sn,
+                "headers":c["headers"],
+                "row":c["row"],
+                "data":c["data"]
+            })
+    return {"query":q,"sheet":sheet,"count":len(result),"results":result}
 
 @app.get("/dashboard")
-def dashboard(
+def dashboard(authenticated:bool=Depends(require_auth)):
+    rows=get_all_rows()
+    today=datetime.now().date()
+    orders=[]
+    dispatch=[]
+    hold=[]
 
-    authenticated: bool = Depends(
-        require_auth
+    for item in rows:
+        sn=text(item.get("sheet"))
+        c=convert_database_row(item)
+        if sn=="ORDERS":
+            orders.append(c)
+        elif sn=="Dispatched Orders":
+            dispatch.append({"c":c,"cancelled":item.get("cancelled",False) is True})
+        elif sn=="Holded Orders":
+            hold.append(c["data"])
+
+    order_qty=0
+    today_orders=0
+    today_order_qty=0
+    order_numbers=set()
+    size_data={}
+    party_data={}
+
+    for c in orders:
+        row=c["row"]
+        record=c["data"]
+        order_no=pos(row,1)
+        party=text(pos(row,3))
+        size=normalize_size(pos(row,4))
+        qty=number(pos(row,6))
+        row_date=date_only(first_existing(record,["Date","DATE"]))
+        destination=text(pos(row,9))
+
+        order_qty+=qty
+
+        if order_no not in (None,""):
+            order_numbers.add(text(order_no))
+
+        if row_date==today:
+            today_orders+=1
+            today_order_qty+=qty
+
+        if size:
+            x=size_data.setdefault(size,{"orders":0,"quantity":0,"nos":set()})
+            x["orders"]+=1
+            x["quantity"]+=qty
+            if order_no not in (None,""):
+                x["nos"].add(text(order_no))
+
+        if party:
+            x=party_data.setdefault(
+                party,{"orders":0,"quantity":0,"destinations":{}}
+            )
+            x["orders"]+=1
+            x["quantity"]+=qty
+
+            destination_name=destination or "NO DESTINATION"
+            y=x["destinations"].setdefault(
+                destination_name,{"orders":0,"quantity":0,"sizes":{}}
+            )
+            y["orders"]+=1
+            y["quantity"]+=qty
+
+            size_name=size or "UNKNOWN"
+            z=y["sizes"].setdefault(
+                size_name,{"orders":0,"quantity":0}
+            )
+            z["orders"]+=1
+            z["quantity"]+=qty
+
+    dispatch_qty=0
+    today_dispatch=0
+    today_dispatch_qty=0
+    cancelled=0
+
+    for item in dispatch:
+        if item["cancelled"]:
+            cancelled+=1
+            continue
+
+        c=item["c"]
+        qty=number(first_existing(c["data"],["Quantity Pcs.","Quantity","QUANTITY"]))
+        row_date=date_only(first_existing(c["data"],["Date","BILL DATE","IN/OUT DATE"]))
+
+        dispatch_qty+=qty
+
+        if row_date==today:
+            today_dispatch+=1
+            today_dispatch_qty+=qty
+
+    hold_qty=sum(
+        number(first_existing(x,["Quantity Pcs.","Quantity","QUANTITY"]))
+        for x in hold
     )
 
-):
+    size_wise=[]
+    for k,v in size_data.items():
+        size_wise.append({
+            "size":k,
+            "orders":len(v["nos"]) or v["orders"],
+            "quantity":clean_number(v["quantity"])
+        })
+    size_wise.sort(key=lambda x:x["quantity"],reverse=True)
 
-    try:
+    party_wise=[]
+    for p,x in party_data.items():
+        destinations=[]
 
-        rows = get_all_rows()
-
-        today = datetime.now().date()
-
-        orders = []
-
-        for item in rows:
-
-            if text(
-                item.get("sheet")
-            ) == "ORDERS":
-
-                converted = convert_database_row(
-                    item
-                )
-
-                orders.append({
-
-                    "data":
-                        converted["data"],
-
-                    "row":
-                        converted["row"]
-
+        for dn,y in x["destinations"].items():
+            sizes=[]
+            for sn,z in y["sizes"].items():
+                sizes.append({
+                    "size":sn,
+                    "orders":z["orders"],
+                    "quantity":clean_number(z["quantity"])
                 })
 
-
-        order_quantity = 0
-
-        order_numbers = set()
-
-        today_orders = 0
-
-        today_order_quantity = 0
-
-        size_data = {}
-
-        party_data = {}
-
-
-        for order_item in orders:
-
-            row = order_item["row"]
-
-            record = order_item["data"]
-
-
-            order_no = get_row_position(
-                row,
-                1
-            )
-
-
-            party = text(
-                get_row_position(
-                    row,
-                    3
-                )
-            )
-
-
-            raw_size = get_row_position(
-                row,
-                4
-            )
-
-            size = normalize_size(
-                raw_size
-            )
-
-
-            quantity = number(
-                get_row_position(
-                    row,
-                    6
-                )
-            )
-
-
-            row_date = date_only(
-
-                first_existing(
-
-                    record,
-
-                    [
-                        "Date",
-                        "DATE"
-                    ]
-
-                )
-
-            )
-
-
-            destination = text(
-                get_row_position(
-                    row,
-                    9
-                )
-            )
-
-
-            if order_no not in (
-                None,
-                ""
-            ):
-
-                order_numbers.add(
-                    text(order_no)
-                )
-
-
-            order_quantity += quantity
-
-
-            if row_date == today:
-
-                today_orders += 1
-
-                today_order_quantity += (
-                    quantity
-                )
-
-
-            if size:
-
-                if size not in size_data:
-
-                    size_data[size] = {
-
-                        "size": size,
-
-                        "orders": 0,
-
-                        "quantity": 0,
-
-                        "order_numbers": set()
-
-                    }
-
-
-                size_data[size][
-                    "orders"
-                ] += 1
-
-
-                size_data[size][
-                    "quantity"
-                ] += quantity
-
-
-                if order_no not in (
-                    None,
-                    ""
-                ):
-
-                    size_data[size][
-                        "order_numbers"
-                    ].add(
-                        text(order_no)
-                    )
-
-
-            # =================================================
-            # PARTY -> DESTINATION -> SIZE -> QUANTITY
-            # =================================================
-
-            if party:
-
-                if party not in party_data:
-
-                    party_data[party] = {
-
-                        "party":
-                            party,
-
-                        "orders":
-                            0,
-
-                        "quantity":
-                            0,
-
-                        "destinations":
-                            {}
-
-                    }
-
-
-                party_data[party][
-                    "orders"
-                ] += 1
-
-
-                party_data[party][
-                    "quantity"
-                ] += quantity
-
-
-                destination_name = (
-
-                    destination
-
-                    if destination
-
-                    else
-                    "NO DESTINATION"
-
-                )
-
-
-                if destination_name not in (
-                    party_data[
-                        party
-                    ]["destinations"]
-                ):
-
-                    party_data[
-                        party
-                    ]["destinations"][destination_name] = {
-
-                        "destination":
-                            destination_name,
-
-                        "orders":
-                            0,
-
-                        "quantity":
-                            0,
-
-                        "sizes":
-                            {}
-
-                    }
-
-
-                destination_data = (
-                    party_data[
-                        party
-                    ]["destinations"][destination_name]
-                )
-
-
-                destination_data[
-                    "orders"
-                ] += 1
-
-
-                destination_data[
-                    "quantity"
-                ] += quantity
-
-
-                size_name = (
-                    size
-                    if size
-                    else "UNKNOWN"
-                )
-
-
-                if size_name not in (
-                    destination_data[
-                        "sizes"
-                    ]
-                ):
-
-                    destination_data[
-                        "sizes"
-                    ][size_name] = {
-
-                        "size":
-                            size_name,
-
-                        "orders":
-                            0,
-
-                        "quantity":
-                            0
-
-                    }
-
-
-                size_data_item = (
-                    destination_data[
-                        "sizes"
-                    ][size_name]
-                )
-
-
-                size_data_item[
-                    "orders"
-                ] += 1
-
-
-                size_data_item[
-                    "quantity"
-                ] += quantity
-
-
-        # =========================================================
-        # DISPATCH
-        # RED / CANCELLED ROWS ARE NOT COUNTED
-        # =========================================================
-
-        dispatch = []
-
-        for item in rows:
-
-            if text(
-                item.get("sheet")
-            ) == "Dispatched Orders":
-
-                converted = convert_database_row(
-                    item
-                )
-
-                dispatch.append({
-
-                    "data":
-                        converted["data"],
-
-                    "row":
-                        converted["row"],
-
-                    "cancelled":
-                        item.get(
-                            "cancelled",
-                            False
-                        ) is True
-
-                })
-
-
-        dispatch_quantity = 0
-
-        today_dispatch = 0
-
-        today_dispatch_quantity = 0
-
-        cancelled_dispatch_rows = 0
-
-
-        for dispatch_item in dispatch:
-
-            # =========================================
-            # RED TEXT = CANCELLED
-            # DO NOT COUNT
-            # =========================================
-
-            if dispatch_item.get(
-                "cancelled",
-                False
-            ):
-
-                cancelled_dispatch_rows += 1
-
-                continue
-
-
-            row = dispatch_item["row"]
-
-            record = dispatch_item["data"]
-
-
-            quantity = number(
-
-                first_existing(
-
-                    record,
-
-                    [
-                        "Quantity Pcs.",
-                        "Quantity",
-                        "QUANTITY"
-                    ]
-
-                )
-
-            )
-
-
-            dispatch_quantity += quantity
-
-
-            row_date = date_only(
-
-                first_existing(
-
-                    record,
-
-                    [
-                        "Date",
-                        "BILL DATE",
-                        "IN/OUT DATE"
-                    ]
-
-                )
-
-            )
-
-
-            if row_date == today:
-
-                today_dispatch += 1
-
-                today_dispatch_quantity += (
-                    quantity
-                )
-
-
-        # =========================================================
-        # HOLD ORDERS
-        # =========================================================
-
-        hold = []
-
-        for item in rows:
-
-            if text(
-                item.get("sheet")
-            ) == "Holded Orders":
-
-                hold.append(
-                    convert_database_row(
-                        item
-                    )["data"]
-                )
-
-
-        hold_quantity = 0
-
-
-        for row in hold:
-
-            hold_quantity += number(
-
-                first_existing(
-
-                    row,
-
-                    [
-                        "Quantity Pcs.",
-                        "Quantity",
-                        "QUANTITY"
-                    ]
-
-                )
-
-            )
-
-
-        # =========================================================
-        # SIZE WISE FINAL
-        # =========================================================
-
-        size_wise = []
-
-
-        for item in size_data.values():
-
-            unique_size_orders = len(
-                item["order_numbers"]
-            )
-
-            if unique_size_orders == 0:
-
-                unique_size_orders = (
-                    item["orders"]
-                )
-
-
-            size_wise.append({
-
-                "size":
-                    item["size"],
-
-                "orders":
-                    unique_size_orders,
-
-                "quantity":
-                    clean_number(
-                        item["quantity"]
-                    )
-
+            sizes.sort(key=lambda x:x["quantity"],reverse=True)
+
+            destinations.append({
+                "destination":dn,
+                "orders":y["orders"],
+                "quantity":clean_number(y["quantity"]),
+                "sizes":sizes
             })
 
-
-        size_wise.sort(
-
-            key=lambda x:
-                x["quantity"],
-
-            reverse=True
-
-        )
-
-
-        # =========================================================
-        # PARTY WISE FINAL
-        # =========================================================
-
-        party_wise = []
-
-
-        for item in party_data.values():
-
-            destinations = []
-
-
-            for destination_item in (
-                item[
-                    "destinations"
-                ].values()
-            ):
-
-                sizes = []
-
-
-                for size_item in (
-                    destination_item[
-                        "sizes"
-                    ].values()
-                ):
-
-                    sizes.append({
-
-                        "size":
-                            size_item[
-                                "size"
-                            ],
-
-                        "orders":
-                            size_item[
-                                "orders"
-                            ],
-
-                        "quantity":
-                            clean_number(
-                                size_item[
-                                    "quantity"
-                                ]
-                            )
-
-                    })
-
-
-                sizes.sort(
-
-                    key=lambda x:
-                        x["quantity"],
-
-                    reverse=True
-
-                )
-
-
-                destinations.append({
-
-                    "destination":
-                        destination_item[
-                            "destination"
-                        ],
-
-                    "orders":
-                        destination_item[
-                            "orders"
-                        ],
-
-                    "quantity":
-                        clean_number(
-                            destination_item[
-                                "quantity"
-                            ]
-                        ),
-
-                    "sizes":
-                        sizes
-
-                })
-
-
-            destinations.sort(
-
-                key=lambda x:
-                    x["quantity"],
-
-                reverse=True
-
-            )
-
-
-            party_wise.append({
-
-                "party":
-                    item["party"],
-
-                "orders":
-                    item["orders"],
-
-                "quantity":
-                    clean_number(
-                        item["quantity"]
-                    ),
-
-                "destinations":
-                    destinations
-
-            })
-
-
-        party_wise.sort(
-
-            key=lambda x:
-                x["quantity"],
-
-            reverse=True
-
-        )
-
-
-        # =========================================================
-        # FINAL DASHBOARD RESPONSE
-        # =========================================================
-
-        return {
-
-            "date":
-                today.isoformat(),
-
-            "today": {
-
-                "orders":
-                    today_orders,
-
-                "order_quantity":
-                    clean_number(
-                        today_order_quantity
-                    ),
-
-                "dispatch":
-                    today_dispatch,
-
-                "dispatch_quantity":
-                    clean_number(
-                        today_dispatch_quantity
-                    )
-
-            },
-
-
-            "orders": {
-
-                "total_rows":
-                    len(orders),
-
-                "unique_orders":
-                    len(order_numbers),
-
-                "total_quantity":
-                    clean_number(
-                        order_quantity
-                    )
-
-            },
-
-
-            "dispatch": {
-
-                "total_rows":
-                    len(dispatch)
-                    - cancelled_dispatch_rows,
-
-                "total_quantity":
-                    clean_number(
-                        dispatch_quantity
-                    ),
-
-                "today_rows":
-                    today_dispatch,
-
-                "today_quantity":
-                    clean_number(
-                        today_dispatch_quantity
-                    ),
-
-                "cancelled_rows":
-                    cancelled_dispatch_rows
-
-            },
-
-
-            "hold": {
-
-                "orders":
-                    len(hold),
-
-                "quantity":
-                    clean_number(
-                        hold_quantity
-                    )
-
-            },
-
-
-            "size_wise":
-                size_wise,
-
-            "party_wise":
-                party_wise,
-
-            "last_updated":
-                datetime.now()
-                .astimezone()
-                .isoformat()
-
-        }
-
-
-    except HTTPException:
-        raise
-
-    except Exception as e:
-
-        raise HTTPException(
-
-            status_code=500,
-
-            detail=str(e)
-
-        )
-
-
-# =========================================================
-# MONTHLY REPORT - AVAILABLE MONTHS
-# =========================================================
+        destinations.sort(key=lambda x:x["quantity"],reverse=True)
+
+        party_wise.append({
+            "party":p,
+            "orders":x["orders"],
+            "quantity":clean_number(x["quantity"]),
+            "destinations":destinations
+        })
+
+    party_wise.sort(key=lambda x:x["quantity"],reverse=True)
+
+    return {
+        "date":today.isoformat(),
+        "today":{
+            "orders":today_orders,
+            "order_quantity":clean_number(today_order_qty),
+            "dispatch":today_dispatch,
+            "dispatch_quantity":clean_number(today_dispatch_qty)
+        },
+        "orders":{
+            "total_rows":len(orders),
+            "unique_orders":len(order_numbers),
+            "total_quantity":clean_number(order_qty)
+        },
+        "dispatch":{
+            "total_rows":len(dispatch)-cancelled,
+            "total_quantity":clean_number(dispatch_qty),
+            "today_rows":today_dispatch,
+            "today_quantity":clean_number(today_dispatch_qty),
+            "cancelled_rows":cancelled
+        },
+        "hold":{
+            "orders":len(hold),
+            "quantity":clean_number(hold_qty)
+        },
+        "size_wise":size_wise,
+        "party_wise":party_wise,
+        "last_updated":datetime.now().astimezone().isoformat()
+    }
 
 @app.get("/monthly-report/months")
-def monthly_report_months(
+def monthly_report_months(authenticated:bool=Depends(require_auth)):
+    months=set()
 
-    authenticated: bool = Depends(
-        require_auth
-    )
+    for item in get_all_rows():
+        if text(item.get("sheet"))!="Dispatched Orders":
+            continue
+        if item.get("cancelled",False) is True:
+            continue
 
-):
+        row=convert_database_row(item)["row"]
+        d=date_only(pos(row,11))
 
-    try:
+        if d:
+            months.add((d.year,d.month))
 
-        rows = get_all_rows()
-
-        months = set()
-
-
-        for item in rows:
-
-            if text(
-                item.get("sheet")
-            ) != "Dispatched Orders":
-
-                continue
-
-
-            # =====================================================
-            # RED TEXT = CANCELLED
-            # CANCELLED ROW KA MONTH BHI IGNORE
-            # =====================================================
-
-            if item.get(
-                "cancelled",
-                False
-            ) is True:
-
-                continue
-
-
-            converted = convert_database_row(
-                item
-            )
-
-            row = converted[
-                "row"
-            ]
-
-
-            # COLUMN K = DATE
-
-            row_date = date_only(
-                get_row_position(
-                    row,
-                    11
-                )
-            )
-
-
-            if row_date:
-
-                months.add(
-
-                    (
-                        row_date.year,
-                        row_date.month
-                    )
-
-                )
-
-
-        month_list = []
-
-
-        for year, month in sorted(
-            months,
-            reverse=True
-        ):
-
-            month_list.append({
-
-                "year":
-                    year,
-
-                "month":
-                    month,
-
-                "month_name":
-                    calendar.month_name[
-                        month
-                    ],
-
-                "label":
-                    f"{calendar.month_name[month]} {year}"
-
-            })
-
-
-        return {
-
-            "count":
-                len(month_list),
-
-            "months":
-                month_list
-
-        }
-
-
-    except HTTPException:
-        raise
-
-    except Exception as e:
-
-        raise HTTPException(
-
-            status_code=500,
-
-            detail=str(e)
-
-        )
-
-
-# =========================================================
-# MONTHLY REPORT - DAILY PCS DISPATCH
-#
-# K = DATE
-# M = MATERIAL
-# F = QUANTITY
-#
-# SAME DATE + SAME MATERIAL = PLUS
-#
-# RED TEXT / CANCELLED = IGNORE
-# =========================================================
+    return {
+        "count":len(months),
+        "months":[
+            {
+                "year":y,
+                "month":m,
+                "month_name":calendar.month_name[m],
+                "label":f"{calendar.month_name[m]} {y}"
+            }
+            for y,m in sorted(months,reverse=True)
+        ]
+    }
 
 @app.get("/monthly-report/daily-pcs-dispatch")
 def daily_pcs_dispatch(
-
-    year: int,
-
-    month: int,
-
-    authenticated: bool = Depends(
-        require_auth
-    )
-
+    year:int,
+    month:int,
+    authenticated:bool=Depends(require_auth)
 ):
-
-    try:
-
-        if month < 1 or month > 12:
-
-            raise HTTPException(
-
-                status_code=400,
-
-                detail="Invalid month"
-
-            )
-
-
-        if year < 2000 or year > 2100:
-
-            raise HTTPException(
-
-                status_code=400,
-
-                detail="Invalid year"
-
-            )
-
-
-        rows = get_all_rows()
-
-
-        days_in_month = calendar.monthrange(
-            year,
-            month
-        )[1]
-
-
-        # =========================================================
-        # DAILY DATA
-        # =========================================================
-
-        daily_data = {}
-
-        for day_number in range(
-            1,
-            days_in_month + 1
-        ):
-
-            daily_data[day_number] = {
-                "date": day_number
-            }
-
-            for material in MONTHLY_MATERIALS:
-
-                daily_data[day_number][
-                    material
-                ] = 0
-
-
-        matched_rows = 0
-
-        skipped_cancelled_rows = 0
-
-        skipped_unknown_material = 0
-
-        skipped_no_date = 0
-
-
-        # =========================================================
-        # READ DISPATCHED ORDERS
-        # =========================================================
-
-        for item in rows:
-
-            if text(
-                item.get("sheet")
-            ) != "Dispatched Orders":
-
-                continue
-
-
-            # =====================================================
-            # RED TEXT = CANCELLED
-            # DO NOT COUNT
-            # =====================================================
-
-            if item.get(
-                "cancelled",
-                False
-            ) is True:
-
-                skipped_cancelled_rows += 1
-
-                continue
-
-
-            converted = convert_database_row(
-                item
-            )
-
-            row = converted[
-                "row"
-            ]
-
-
-            # =====================================================
-            # K = DATE
-            # =====================================================
-
-            row_date = date_only(
-
-                get_row_position(
-                    row,
-                    11
-                )
-
-            )
-
-
-            if row_date is None:
-
-                skipped_no_date += 1
-
-                continue
-
-
-            if row_date.year != year:
-                continue
-
-            if row_date.month != month:
-                continue
-
-
-            # =====================================================
-            # M = MATERIAL
-            # =====================================================
-
-            material_type = text(
-
-                get_row_position(
-                    row,
-                    13
-                )
-
-            )
-
-
-            if not material_type:
-
-                skipped_unknown_material += 1
-
-                continue
-
-
-            normalized = normalize_material(
-                material_type
-            )
-
-
-            # =====================================================
-            # MAP MATERIAL
-            # =====================================================
-
-            report_column = (
-                MATERIAL_MAPPING.get(
-                    normalized
-                )
-            )
-
-
-            if not report_column:
-
-                skipped_unknown_material += 1
-
-                continue
-
-
-            # =====================================================
-            # F = QUANTITY
-            # =====================================================
-
-            quantity = number(
-
-                get_row_position(
-                    row,
-                    6
-                )
-
-            )
-
-
-            # =====================================================
-            # SAME DATE + SAME MATERIAL = PLUS
-            # =====================================================
-
-            daily_data[
-                row_date.day
-            ][
-                report_column
-            ] += quantity
-
-
-            matched_rows += 1
-
-
-        # =========================================================
-        # TOTAL
-        # =========================================================
-
-        total = {
-            "date": "TOTAL"
+    if month<1 or month>12:
+        raise HTTPException(400,"Invalid month")
+    if year<2000 or year>2100:
+        raise HTTPException(400,"Invalid year")
+
+    days={
+        d:{
+            "date":d,
+            **{m:0 for m in MONTHLY_MATERIALS}
         }
+        for d in range(1,calendar.monthrange(year,month)[1]+1)
+    }
 
+    matched=0
+    cancelled=0
+    unknown=0
+    no_date=0
 
-        for material in MONTHLY_MATERIALS:
+    for item in get_all_rows():
+        if text(item.get("sheet"))!="Dispatched Orders":
+            continue
 
-            value = 0
+        if item.get("cancelled",False) is True:
+            cancelled+=1
+            continue
 
-            for day_number in daily_data:
+        row=convert_database_row(item)["row"]
+        row_date=date_only(pos(row,11))
 
-                value += number(
+        if row_date is None:
+            no_date+=1
+            continue
 
-                    daily_data[
-                        day_number
-                    ][material]
+        if row_date.year!=year or row_date.month!=month:
+            continue
 
-                )
+        material=normalize_material(pos(row,13))
+        report_column=MATERIAL_MAPPING.get(material)
 
-            total[material] = clean_number(
-                value
-            )
+        if not report_column:
+            unknown+=1
+            continue
 
+        days[row_date.day][report_column]+=number(pos(row,6))
+        matched+=1
 
-        # =========================================================
-        # DAYS
-        # =========================================================
-
-        days = []
-
-
-        for day_number in range(
-            1,
-            days_in_month + 1
-        ):
-
-            item = {
-                "date": day_number
-            }
-
-
-            for material in MONTHLY_MATERIALS:
-
-                item[material] = clean_number(
-
-                    daily_data[
-                        day_number
-                    ][material]
-
-                )
-
-
-            days.append(item)
-
-
-        # =========================================================
-        # TITLE
-        # =========================================================
-
-        month_title = (
-
-            f"{calendar.month_name[month].upper()}"
-            f"- {year} MONTHLY PCS DISPATCH QUANTITY"
-
-        )
-
-
-        return {
-
-            "year":
-                year,
-
-            "month":
-                month,
-
-            "month_name":
-                calendar.month_name[month],
-
-            "title":
-                month_title,
-
-            "columns":
-                MONTHLY_MATERIALS,
-
-            "days":
-                days,
-
-            "total":
-                total,
-
-            "matched_dispatch_rows":
-                matched_rows,
-
-            "skipped_cancelled_rows":
-                skipped_cancelled_rows,
-
-            "skipped_unknown_material":
-                skipped_unknown_material,
-
-            "skipped_no_date":
-                skipped_no_date,
-
-            "source_columns": {
-
-                "date":
-                    "K",
-
-                "material":
-                    "M",
-
-                "quantity":
-                    "F"
-
-            },
-
-            "last_updated":
-                datetime.now()
-                .astimezone()
-                .isoformat()
-
+    total={
+        "date":"TOTAL",
+        **{
+            m:clean_number(sum(days[d][m] for d in days))
+            for m in MONTHLY_MATERIALS
         }
+    }
 
-
-    except HTTPException:
-        raise
-
-    except Exception as e:
-
-        raise HTTPException(
-
-            status_code=500,
-
-            detail=str(e)
-
-        )
-
-
-# =========================================================
-# CURRENT MONTH SHORTCUT
-# =========================================================
+    return {
+        "year":year,
+        "month":month,
+        "month_name":calendar.month_name[month],
+        "title":f"{calendar.month_name[month].upper()}- {year} MONTHLY PCS DISPATCH QUANTITY",
+        "columns":MONTHLY_MATERIALS,
+        "days":[
+            {
+                k:clean_number(v) if k!="date" else v
+                for k,v in x.items()
+            }
+            for x in days.values()
+        ],
+        "total":total,
+        "matched_dispatch_rows":matched,
+        "skipped_cancelled_rows":cancelled,
+        "skipped_unknown_material":unknown,
+        "skipped_no_date":no_date,
+        "source_columns":{
+            "date":"K",
+            "material":"M",
+            "quantity":"F"
+        },
+        "last_updated":datetime.now().astimezone().isoformat()
+    }
 
 @app.get("/monthly-report/daily-pcs-dispatch/current")
-def current_month_daily_pcs_dispatch(
-
-    authenticated: bool = Depends(
-        require_auth
-    )
-
-):
-
-    today = datetime.now().date()
-
-    return daily_pcs_dispatch(
-
-        year=today.year,
-
-        month=today.month,
-
-        authenticated=True
-
-    )
-
-
-# =========================================================
-# MATERIAL MAPPING CHECK
-# =========================================================
+def current_month_daily_pcs_dispatch(authenticated:bool=Depends(require_auth)):
+    d=datetime.now().date()
+    return daily_pcs_dispatch(d.year,d.month,True)
 
 @app.get("/monthly-report/material-mapping")
-def material_mapping(
+def material_mapping(authenticated:bool=Depends(require_auth)):
+    result={}
 
-    authenticated: bool = Depends(
-        require_auth
-    )
+    for item in get_all_rows():
+        if text(item.get("sheet"))!="Dispatched Orders":
+            continue
 
-):
+        value=text(pos(convert_database_row(item)["row"],13))
 
-    try:
+        if value:
+            normalized=normalize_material(value)
+            mapped=MATERIAL_MAPPING.get(normalized)
+            result[value]={
+                "excel_value":value,
+                "normalized":normalized,
+                "report_column":mapped,
+                "mapped":bool(mapped)
+            }
 
-        rows = get_all_rows()
+    return {
+        "count":len(result),
+        "materials":list(result.values())
+    }
 
-        actual_types = {}
+TEST_REPORT_MASTER_SHEETS=[
+    "TEST REPORT DATA",
+    "TEST REPORT PARTY MASTER",
+    "PARTY MASTER",
+    "PARTY MASTER DATA"
+]
 
+def find_test_report_master(rows):
+    for item in rows:
+        headers=item.get("headers",[])
+        if not isinstance(headers,list):
+            continue
 
-        for item in rows:
+        normalized=[
+            normalize_material(x).replace(" ","")
+            for x in headers
+        ]
 
-            if text(
-                item.get("sheet")
-            ) != "Dispatched Orders":
+        party_index=None
+        address_index=None
 
-                continue
+        for i,name in enumerate(normalized):
+            if name in {"PARTYNAME","CUSTOMERNAME","PARTY"} and party_index is None:
+                party_index=i
+            if name in {"ADDRESS","PARTYADDRESS","CUSTOMERADDRESS"} and address_index is None:
+                address_index=i
 
+        if party_index is not None and address_index is not None:
+            return party_index,address_index,text(item.get("sheet"))
 
-            converted = convert_database_row(
-                item
-            )
+    for sheet_name in TEST_REPORT_MASTER_SHEETS:
+        if any(text(i.get("sheet"))==sheet_name for i in rows):
+            return 0,1,sheet_name
 
-            row = converted[
-                "row"
-            ]
+    return None,None,None
 
+@app.get("/test-report/master-data")
+def test_report_master_data(authenticated:bool=Depends(require_auth)):
+    rows=get_all_rows()
+    party_index,address_index,sheet_name=find_test_report_master(rows)
 
-            # M = TYPE OF MATERIAL
-
-            material_type = text(
-
-                get_row_position(
-                    row,
-                    13
-                )
-
-            )
-
-
-            if not material_type:
-                continue
-
-
-            normalized = normalize_material(
-                material_type
-            )
-
-
-            mapped_to = MATERIAL_MAPPING.get(
-                normalized
-            )
-
-
-            if material_type not in actual_types:
-
-                actual_types[
-                    material_type
-                ] = {
-
-                    "excel_value":
-                        material_type,
-
-                    "normalized":
-                        normalized,
-
-                    "report_column":
-                        mapped_to,
-
-                    "mapped":
-                        bool(mapped_to)
-
-                }
-
-
+    if party_index is None:
         return {
-
-            "count":
-                len(actual_types),
-
-            "materials":
-                list(
-                    actual_types.values()
-                )
-
+            "sheet":None,
+            "count":0,
+            "parties":[],
+            "message":"A=PARTY NAME aur B=ADDRESS wali master sheet nahi mili."
         }
 
+    parties={}
+
+    for item in rows:
+        if text(item.get("sheet"))!=sheet_name:
+            continue
+
+        row=item.get("row",[])
+        if not isinstance(row,list):
+            continue
+
+        party=text(pos(row,party_index+1))
+        address=text(pos(row,address_index+1))
+
+        if not party:
+            continue
+
+        check=normalize_material(party).replace(" ","")
+
+        if check in {"PARTYNAME","CUSTOMERNAME","PARTY"}:
+            continue
+
+        parties[party]=address
+
+    result=[
+        {"party":party,"address":address}
+        for party,address in sorted(
+            parties.items(),
+            key=lambda x:x[0].upper()
+        )
+    ]
+
+    return {
+        "sheet":sheet_name,
+        "count":len(result),
+        "parties":result
+    }
+
+@app.post("/test-report/reserve-bill")
+def test_report_reserve_bill(authenticated:bool=Depends(require_auth)):
+    try:
+        prefix="MP/26-27/"
+        highest=408
+
+        for item in get_all_rows():
+            if text(item.get("sheet"))!="Dispatched Orders":
+                continue
+
+            row=convert_database_row(item)["row"]
+
+            for value in row:
+                value=text(value)
+
+                if value.startswith(prefix):
+                    try:
+                        highest=max(
+                            highest,
+                            int(value[len(prefix):])
+                        )
+                    except:
+                        pass
+
+        return {
+            "bill_no":prefix+str(highest+1)
+        }
 
     except HTTPException:
         raise
-
     except Exception as e:
-
-        raise HTTPException(
-
-            status_code=500,
-
-            detail=str(e)
-
-        )
+        raise HTTPException(500,str(e))
