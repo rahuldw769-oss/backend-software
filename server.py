@@ -170,15 +170,22 @@ def date_only(value):
 
     value = str(value).strip()
 
+    # ISO datetime:
+    # 2026-08-02T00:00:00
+    # 2026-08-02T00:00:00+00:00
+    try:
+        return datetime.fromisoformat(
+            value.replace("Z", "+00:00")
+        ).date()
+    except Exception:
+        pass
+
     formats = (
         "%Y-%m-%d",
-        "%Y-%m-%d %H:%M:%S",
         "%d-%m-%Y",
         "%d/%m/%Y",
         "%m/%d/%Y",
         "%d.%m.%Y",
-        "%d-%m-%y",
-        "%d/%m/%y",
     )
 
     for fmt in formats:
@@ -187,23 +194,8 @@ def date_only(value):
                 value,
                 fmt
             ).date()
-
         except Exception:
             pass
-
-    try:
-        serial = float(value)
-
-        if 1 <= serial <= 60000:
-            base = datetime(1899, 12, 30)
-
-            return (
-                base
-                + timedelta(days=serial)
-            ).date()
-
-    except Exception:
-        pass
 
     return None
 
