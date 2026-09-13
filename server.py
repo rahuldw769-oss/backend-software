@@ -9,6 +9,7 @@ import hashlib
 import base64
 import json
 import requests
+import calendar
 
 
 # =========================================================
@@ -42,6 +43,142 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 TABLE = "excel_rows"
+
+
+# =========================================================
+# MONTHLY REPORT - FIXED MATERIAL COLUMNS
+# =========================================================
+
+MONTHLY_MATERIALS = [
+    "SLIP SHEET   (pcs)",
+    "FRESCO PAD PCS",
+    "M FOLD PCS",
+    "CORE PIPE SCRAP   (KG)",
+    "PAPER SCRAP (KG)",
+    "TOILET ROLL (PCS)",
+    "KRAFT PAPER (KGS)",
+    "PET GRIP SHEET   (PCS)",
+    "KRAFT PAPEER   GRIPSHEET (PCS)",
+    "GRIP SLIP SHEET   (PCS)",
+    "TISSUE PAPER/   NAPKIN (pcs)",
+    "KITCHEN ROLL",
+    "PLASTIC SHEET   (PCS)",
+    "JRT (pcs)",
+    "Z FOLD (PCS)",
+]
+
+
+# =========================================================
+# MATERIAL TYPE MAPPING
+# =========================================================
+#
+# Excel ke "TYPE OF MATERIAL" ko monthly report ke
+# fixed column ke saath map kiya gaya hai.
+#
+# Matching uppercase + spaces remove karke hoti hai.
+#
+
+MATERIAL_MAPPING = {
+
+    "SLIPSHEET":
+        "SLIP SHEET   (pcs)",
+
+    "SLIP SHEET":
+        "SLIP SHEET   (pcs)",
+
+    "FRESCOPAD":
+        "FRESCO PAD PCS",
+
+    "FRESCO PAD":
+        "FRESCO PAD PCS",
+
+    "MFOLD":
+        "M FOLD PCS",
+
+    "M FOLD":
+        "M FOLD PCS",
+
+    "COREPIPESCRAP":
+        "CORE PIPE SCRAP   (KG)",
+
+    "CORE PIPE SCRAP":
+        "CORE PIPE SCRAP   (KG)",
+
+    "PAPERSCRAP":
+        "PAPER SCRAP (KG)",
+
+    "PAPER SCRAP":
+        "PAPER SCRAP (KG)",
+
+    "TOILETROLL":
+        "TOILET ROLL (PCS)",
+
+    "TOILET ROLL":
+        "TOILET ROLL (PCS)",
+
+    "KRAFTPAPER":
+        "KRAFT PAPER (KGS)",
+
+    "KRAFT PAPER":
+        "KRAFT PAPER (KGS)",
+
+    "PETGRIPSHEET":
+        "PET GRIP SHEET   (PCS)",
+
+    "PET GRIP SHEET":
+        "PET GRIP SHEET   (PCS)",
+
+    "PETGRIP SHEET":
+        "PET GRIP SHEET   (PCS)",
+
+    "KRAFTPAPERGRIPSHEET":
+        "KRAFT PAPEER   GRIPSHEET (PCS)",
+
+    "KRAFT PAPER GRIPSHEET":
+        "KRAFT PAPEER   GRIPSHEET (PCS)",
+
+    "GRIPSLIPSHEET":
+        "GRIP SLIP SHEET   (PCS)",
+
+    "GRIP SLIP SHEET":
+        "GRIP SLIP SHEET   (PCS)",
+
+    "NAPKIN":
+        "TISSUE PAPER/   NAPKIN (pcs)",
+
+    "TISSUEPAPER":
+        "TISSUE PAPER/   NAPKIN (pcs)",
+
+    "TISSUE PAPER":
+        "TISSUE PAPER/   NAPKIN (pcs)",
+
+    "TISSUEPAPERNAPKIN":
+        "TISSUE PAPER/   NAPKIN (pcs)",
+
+    "TISSUE PAPER/NAPKIN":
+        "TISSUE PAPER/   NAPKIN (pcs)",
+
+    "KITCHENROLL":
+        "KITCHEN ROLL",
+
+    "KITCHEN ROLL":
+        "KITCHEN ROLL",
+
+    "PLASTICSHEET":
+        "PLASTIC SHEET   (PCS)",
+
+    "PLASTIC SHEET":
+        "PLASTIC SHEET   (PCS)",
+
+    "JRT":
+        "JRT (pcs)",
+
+    "ZFOLD":
+        "Z FOLD (PCS)",
+
+    "Z FOLD":
+        "Z FOLD (PCS)",
+}
 
 
 # =========================================================
@@ -113,6 +250,7 @@ def date_only(value):
         "%d-%m-%Y",
         "%d/%m/%Y",
         "%m/%d/%Y",
+        "%d.%m.%Y",
     )
 
     for fmt in formats:
@@ -139,6 +277,42 @@ def first_existing(record, names):
             return record[name]
 
     return None
+
+
+def normalize_material(value):
+
+    value = text(value).upper()
+
+    value = (
+        value
+        .replace(" ", "")
+        .replace("-", "")
+        .replace("_", "")
+        .replace("/", "")
+        .replace("\\", "")
+    )
+
+    return value
+
+
+def get_row_position(row, position):
+
+    """
+    position = 1 based Excel column number.
+
+    Example:
+    Column I = 9
+    """
+
+    index = position - 1
+
+    if index < 0:
+        return None
+
+    if index >= len(row):
+        return None
+
+    return row[index]
 
 
 # =========================================================
@@ -742,11 +916,14 @@ def dashboard(
                 item.get("sheet")
             ) == "ORDERS":
 
-                orders.append(
-                    convert_database_row(
-                        item
-                    )["data"]
+                converted = convert_database_row(
+                    item
                 )
+
+                orders.append({
+                    "data": converted["data"],
+                    "row": converted["row"]
+                })
 
 
         order_quantity = 0
@@ -762,11 +939,16 @@ def dashboard(
         party_data = {}
 
 
-        for row in orders:
+        for order_item in orders:
+
+            row = order_item["row"]
+
+            record = order_item["data"]
+
 
             order_no = first_existing(
 
-                row,
+                record,
 
                 [
                     "Order No.",
@@ -775,11 +957,12 @@ def dashboard(
 
             )
 
+
             quantity = number(
 
                 first_existing(
 
-                    row,
+                    record,
 
                     [
                         "Quantity Pcs.",
@@ -791,11 +974,12 @@ def dashboard(
 
             )
 
+
             row_date = date_only(
 
                 first_existing(
 
-                    row,
+                    record,
 
                     [
                         "Date",
@@ -806,11 +990,12 @@ def dashboard(
 
             )
 
+
             size = text(
 
                 first_existing(
 
-                    row,
+                    record,
 
                     [
                         "Size",
@@ -821,11 +1006,12 @@ def dashboard(
 
             )
 
+
             party = text(
 
                 first_existing(
 
-                    row,
+                    record,
 
                     [
                         "PARTY NAME",
@@ -835,6 +1021,17 @@ def dashboard(
 
                 )
 
+
+            # =================================================
+            # IMPORTANT:
+            # ORDERS COLUMN I = DESTINATION
+            # =================================================
+
+            destination = text(
+                get_row_position(
+                    row,
+                    9
+                )
             )
 
 
@@ -860,6 +1057,10 @@ def dashboard(
                 )
 
 
+            # =================================================
+            # SIZE WISE
+            # =================================================
+
             if size:
 
                 if size not in size_data:
@@ -883,6 +1084,14 @@ def dashboard(
                 ] += quantity
 
 
+            # =================================================
+            # PARTY WISE
+            # PARTY
+            #   ART / MATERIAL
+            #       DESTINATION
+            #           QUANTITY
+            # =================================================
+
             if party:
 
                 if party not in party_data:
@@ -893,15 +1102,101 @@ def dashboard(
 
                         "orders": 0,
 
-                        "quantity": 0
+                        "quantity": 0,
+
+                        "materials": {}
 
                     }
+
 
                 party_data[party][
                     "orders"
                 ] += 1
 
                 party_data[party][
+                    "quantity"
+                ] += quantity
+
+
+                material = size or "UNKNOWN"
+
+
+                if material not in party_data[
+                    party
+                ]["materials"]:
+
+                    party_data[
+                        party
+                    ]["materials"][material] = {
+
+                        "material":
+                            material,
+
+                        "orders":
+                            0,
+
+                        "quantity":
+                            0,
+
+                        "destinations":
+                            {}
+
+                    }
+
+
+                material_data = party_data[
+                    party
+                ]["materials"][material]
+
+
+                material_data[
+                    "orders"
+                ] += 1
+
+                material_data[
+                    "quantity"
+                ] += quantity
+
+
+                destination_name = (
+                    destination
+                    if destination
+                    else "NO DESTINATION"
+                )
+
+
+                if destination_name not in (
+                    material_data[
+                        "destinations"
+                    ]
+                ):
+
+                    material_data[
+                        "destinations"
+                    ][destination_name] = {
+
+                        "destination":
+                            destination_name,
+
+                        "orders":
+                            0,
+
+                        "quantity":
+                            0
+
+                    }
+
+
+                destination_data = material_data[
+                    "destinations"
+                ][destination_name]
+
+
+                destination_data[
+                    "orders"
+                ] += 1
+
+                destination_data[
                     "quantity"
                 ] += quantity
 
@@ -1060,29 +1355,114 @@ def dashboard(
         # PARTY WISE
         # =================================================
 
-        party_wise = sorted(
+        party_wise = []
 
-            [
 
-                {
+        for item in party_data.values():
 
-                    "party":
-                        item["party"],
+            materials = []
+
+
+            for material_item in item[
+                "materials"
+            ].values():
+
+                destinations = []
+
+
+                for destination_item in (
+                    material_item[
+                        "destinations"
+                    ].values()
+                ):
+
+                    destinations.append({
+
+                        "destination":
+                            destination_item[
+                                "destination"
+                            ],
+
+                        "orders":
+                            destination_item[
+                                "orders"
+                            ],
+
+                        "quantity":
+                            clean_number(
+                                destination_item[
+                                    "quantity"
+                                ]
+                            )
+
+                    })
+
+
+                destinations.sort(
+
+                    key=lambda x:
+                        x["quantity"],
+
+                    reverse=True
+
+                )
+
+
+                materials.append({
+
+                    "material":
+                        material_item[
+                            "material"
+                        ],
 
                     "orders":
-                        item["orders"],
+                        material_item[
+                            "orders"
+                        ],
 
                     "quantity":
                         clean_number(
-                            item["quantity"]
-                        )
+                            material_item[
+                                "quantity"
+                            ]
+                        ),
 
-                }
+                    "destinations":
+                        destinations
 
-                for item in
-                party_data.values()
+                })
 
-            ],
+
+            materials.sort(
+
+                key=lambda x:
+                    x["quantity"],
+
+                reverse=True
+
+            )
+
+
+            party_wise.append({
+
+                "party":
+                    item["party"],
+
+                "orders":
+                    item["orders"],
+
+                "quantity":
+                    clean_number(
+                        item["quantity"]
+                    ),
+
+                "materials":
+                    materials
+
+            })
+
+
+        party_wise.sort(
 
             key=lambda x:
                 x["quantity"],
@@ -1182,6 +1562,605 @@ def dashboard(
                 datetime.now()
                 .astimezone()
                 .isoformat()
+
+        }
+
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+
+        raise HTTPException(
+
+            status_code=500,
+
+            detail=str(e)
+
+        )
+
+
+# =========================================================
+# MONTHLY REPORT - AVAILABLE MONTHS
+# =========================================================
+
+@app.get("/monthly-report/months")
+def monthly_report_months(
+
+    authenticated: bool = Depends(
+        require_auth
+    )
+
+):
+
+    try:
+
+        rows = get_all_rows()
+
+        months = set()
+
+
+        for item in rows:
+
+            if text(
+                item.get("sheet")
+            ) != "Dispatched Orders":
+
+                continue
+
+
+            converted = convert_database_row(
+                item
+            )
+
+            record = converted[
+                "data"
+            ]
+
+
+            row_date = date_only(
+
+                first_existing(
+
+                    record,
+
+                    [
+                        "Date",
+                        "BILL DATE",
+                        "IN/OUT DATE"
+                    ]
+
+                )
+
+            )
+
+
+            if row_date:
+
+                months.add(
+
+                    (
+                        row_date.year,
+                        row_date.month
+                    )
+
+                )
+
+
+        month_list = []
+
+
+        for year, month in sorted(
+            months,
+            reverse=True
+        ):
+
+            month_list.append({
+
+                "year":
+                    year,
+
+                "month":
+                    month,
+
+                "month_name":
+                    calendar.month_name[
+                        month
+                    ],
+
+                "label":
+                    f"{calendar.month_name[month]} {year}"
+
+            })
+
+
+        return {
+
+            "count":
+                len(month_list),
+
+            "months":
+                month_list
+
+        }
+
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+
+        raise HTTPException(
+
+            status_code=500,
+
+            detail=str(e)
+
+        )
+
+
+# =========================================================
+# MONTHLY REPORT - DAILY PCS DISPATCH
+# =========================================================
+
+@app.get("/monthly-report/daily-pcs-dispatch")
+def daily_pcs_dispatch(
+
+    year: int,
+
+    month: int,
+
+    authenticated: bool = Depends(
+        require_auth
+    )
+
+):
+
+    try:
+
+        if month < 1 or month > 12:
+
+            raise HTTPException(
+
+                status_code=400,
+
+                detail="Invalid month"
+
+            )
+
+
+        if year < 2000 or year > 2100:
+
+            raise HTTPException(
+
+                status_code=400,
+
+                detail="Invalid year"
+
+            )
+
+
+        rows = get_all_rows()
+
+
+        # =================================================
+        # CREATE EMPTY DAILY DATA
+        # =================================================
+
+        days_in_month = calendar.monthrange(
+            year,
+            month
+        )[1]
+
+
+        daily_data = {}
+
+
+        for day_number in range(
+            1,
+            days_in_month + 1
+        ):
+
+            daily_data[day_number] = {
+
+                "date":
+                    day_number
+
+            }
+
+
+            for material in MONTHLY_MATERIALS:
+
+                daily_data[day_number][
+                    material
+                ] = 0
+
+
+        # =================================================
+        # READ DISPATCHED ORDERS
+        # =================================================
+
+        matched_rows = 0
+
+
+        for item in rows:
+
+            if text(
+                item.get("sheet")
+            ) != "Dispatched Orders":
+
+                continue
+
+
+            converted = convert_database_row(
+                item
+            )
+
+            record = converted[
+                "data"
+            ]
+
+
+            # ---------------------------------------------
+            # DATE
+            # ---------------------------------------------
+
+            row_date = date_only(
+
+                first_existing(
+
+                    record,
+
+                    [
+                        "Date",
+                        "BILL DATE",
+                        "IN/OUT DATE"
+                    ]
+
+                )
+
+            )
+
+
+            if row_date is None:
+
+                continue
+
+
+            if row_date.year != year:
+
+                continue
+
+
+            if row_date.month != month:
+
+                continue
+
+
+            # ---------------------------------------------
+            # TYPE OF MATERIAL
+            # ---------------------------------------------
+
+            material_type = text(
+
+                first_existing(
+
+                    record,
+
+                    [
+                        "TYPE OF MATERIAL",
+                        "Type Of Material",
+                        "TYPE OF MATERIAL "
+                    ]
+
+                )
+
+            )
+
+
+            normalized = normalize_material(
+                material_type
+            )
+
+
+            report_column = (
+                MATERIAL_MAPPING.get(
+                    normalized
+                )
+            )
+
+
+            if not report_column:
+
+                continue
+
+
+            # ---------------------------------------------
+            # QUANTITY
+            # ---------------------------------------------
+
+            quantity = number(
+
+                first_existing(
+
+                    record,
+
+                    [
+                        "Quantity Pcs.",
+                        "Quantity",
+                        "QUANTITY",
+                        "QUANTITY IN NOS"
+                    ]
+
+                )
+
+            )
+
+
+            daily_data[
+                row_date.day
+            ][
+                report_column
+            ] += quantity
+
+
+            matched_rows += 1
+
+
+        # =================================================
+        # TOTAL
+        # =================================================
+
+        total = {
+
+            "date":
+                "TOTAL"
+
+        }
+
+
+        for material in MONTHLY_MATERIALS:
+
+            value = 0
+
+
+            for day_number in daily_data:
+
+                value += number(
+
+                    daily_data[
+                        day_number
+                    ][material]
+
+                )
+
+
+            total[material] = clean_number(
+                value
+            )
+
+
+        # =================================================
+        # CLEAN DAILY DATA
+        # =================================================
+
+        days = []
+
+
+        for day_number in range(
+            1,
+            days_in_month + 1
+        ):
+
+            item = {
+
+                "date":
+                    day_number
+
+            }
+
+
+            for material in MONTHLY_MATERIALS:
+
+                item[material] = clean_number(
+
+                    daily_data[
+                        day_number
+                    ][material]
+
+                )
+
+
+            days.append(item)
+
+
+        # =================================================
+        # MONTH TITLE
+        # =================================================
+
+        month_title = (
+
+            f"{calendar.month_name[month].upper()}"
+            f"- {year} MONTHLY PCS DISPATCH QUANTITY"
+
+        )
+
+
+        return {
+
+            "year":
+                year,
+
+            "month":
+                month,
+
+            "month_name":
+                calendar.month_name[month],
+
+            "title":
+                month_title,
+
+            "columns":
+                MONTHLY_MATERIALS,
+
+            "days":
+                days,
+
+            "total":
+                total,
+
+            "matched_dispatch_rows":
+                matched_rows,
+
+            "last_updated":
+                datetime.now()
+                .astimezone()
+                .isoformat()
+
+        }
+
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+
+        raise HTTPException(
+
+            status_code=500,
+
+            detail=str(e)
+
+        )
+
+
+# =========================================================
+# MONTHLY REPORT - CURRENT MONTH SHORTCUT
+# =========================================================
+
+@app.get("/monthly-report/daily-pcs-dispatch/current")
+def current_month_daily_pcs_dispatch(
+
+    authenticated: bool = Depends(
+        require_auth
+    )
+
+):
+
+    today = datetime.now().date()
+
+    return daily_pcs_dispatch(
+
+        year=today.year,
+
+        month=today.month,
+
+        authenticated=True
+
+    )
+
+
+# =========================================================
+# MATERIAL MAPPING CHECK
+# =========================================================
+#
+# Ye endpoint debugging ke liye hai.
+# Isse pata chalega ki Excel me kaun-kaun se
+# TYPE OF MATERIAL aaye aur kis report column me map hue.
+#
+
+@app.get("/monthly-report/material-mapping")
+def material_mapping(
+
+    authenticated: bool = Depends(
+        require_auth
+    )
+
+):
+
+    try:
+
+        rows = get_all_rows()
+
+        actual_types = {}
+
+        for item in rows:
+
+            if text(
+                item.get("sheet")
+            ) != "Dispatched Orders":
+
+                continue
+
+
+            converted = convert_database_row(
+                item
+            )
+
+            record = converted[
+                "data"
+            ]
+
+
+            material_type = text(
+
+                first_existing(
+
+                    record,
+
+                    [
+                        "TYPE OF MATERIAL",
+                        "Type Of Material",
+                        "TYPE OF MATERIAL "
+                    ]
+
+                )
+
+            )
+
+
+            if not material_type:
+
+                continue
+
+
+            normalized = normalize_material(
+                material_type
+            )
+
+
+            mapped_to = MATERIAL_MAPPING.get(
+                normalized
+            )
+
+
+            if material_type not in actual_types:
+
+                actual_types[
+                    material_type
+                ] = {
+
+                    "excel_value":
+                        material_type,
+
+                    "report_column":
+                        mapped_to,
+
+                    "mapped":
+                        bool(mapped_to)
+
+                }
+
+
+        return {
+
+            "count":
+                len(actual_types),
+
+            "materials":
+                list(
+                    actual_types.values()
+                )
 
         }
 
