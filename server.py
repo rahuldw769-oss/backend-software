@@ -261,59 +261,49 @@ def clean_number(value):
 
 
 def date_only(value):
-
     if value is None:
         return None
 
-    if isinstance(
-        value,
-        datetime
-    ):
+    if isinstance(value, datetime):
         return value.date()
 
-    if isinstance(
-        value,
-        date
-    ):
+    if isinstance(value, date):
         return value
 
-    value = str(
-        value
-    ).strip()
+    value = str(value).strip()
 
+    if not value:
+        return None
+
+    # ISO datetime from Supabase
+    # Example:
+    # 2026-08-01T00:00:00
+    # 2026-08-01T00:00:00+00:00
+    try:
+        return datetime.fromisoformat(
+            value.replace("Z", "+00:00")
+        ).date()
+    except Exception:
+        pass
 
     formats = (
-
         "%Y-%m-%d",
-
         "%d-%m-%Y",
-
         "%d/%m/%Y",
-
         "%m/%d/%Y",
-
         "%d.%m.%Y",
-
     )
 
-
     for fmt in formats:
-
         try:
-
             return datetime.strptime(
                 value,
                 fmt
             ).date()
-
         except Exception:
-
             pass
 
-
     return None
-
-
 def first_existing(
     record,
     names
