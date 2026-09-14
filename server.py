@@ -13,10 +13,8 @@ import calendar
 import random
 
 
-# =========================================================
-# APP
-# =========================================================
-
+# ========================================================= # APP
+# ========================================================= 
 app = FastAPI(
     title="Rahul Software API"
 )
@@ -36,10 +34,8 @@ security = HTTPBearer(
 )
 
 
-# =========================================================
-# LOGIN / ENVIRONMENT
-# =========================================================
-
+# ========================================================= # LOGIN / ENVIRONMENT
+# ========================================================= 
 USERNAME = os.getenv(
     "RAHUL_USERNAME",
     "rahul"
@@ -68,10 +64,8 @@ SUPABASE_KEY = os.getenv(
 TABLE = "excel_rows"
 
 
-# =========================================================
-# MONTHLY MATERIALS
-# =========================================================
-
+# ========================================================= # MONTHLY MATERIALS
+# ========================================================= 
 MONTHLY_MATERIALS = [
 
     "SLIPSHEET",
@@ -198,10 +192,8 @@ MATERIAL_MAPPING = {
 }
 
 
-# =========================================================
-# BASIC HELPERS
-# =========================================================
-
+# ========================================================= # BASIC HELPERS
+# ========================================================= 
 def text(value):
 
     if value is None:
@@ -348,8 +340,7 @@ def normalize_material(
     )
 
 
-    parts =
-        value.split()
+    parts = value.split()
 
 
     parts = [
@@ -389,8 +380,7 @@ def get_row_position(
     position
 ):
 
-    index =
-        position - 1
+    index = position - 1
 
 
     if index < 0:
@@ -404,10 +394,8 @@ def get_row_position(
     return row[index]
 
 
-# =========================================================
-# TOKEN
-# =========================================================
-
+# ========================================================= # TOKEN
+# ========================================================= 
 def make_token(
     username
 ):
@@ -425,8 +413,7 @@ def make_token(
     }
 
 
-    raw =
-        json.dumps(
+    raw = json.dumps(
             payload,
             separators=(
                 ",",
@@ -435,14 +422,12 @@ def make_token(
         ).encode()
 
 
-    encoded =
-        base64.urlsafe_b64encode(
+    encoded = base64.urlsafe_b64encode(
             raw
         ).decode().rstrip("=")
 
 
-    signature =
-        hmac.new(
+    signature = hmac.new(
             SECRET.encode(),
             encoded.encode(),
             hashlib.sha256
@@ -450,8 +435,7 @@ def make_token(
 
 
     return (
-        encoded +
-        "." +
+        encoded + "." +
         signature
     )
 
@@ -462,15 +446,13 @@ def verify_token(
 
     try:
 
-        encoded, signature =
-            token.split(
+        encoded, signature = token.split(
                 ".",
                 1
             )
 
 
-        expected =
-            hmac.new(
+        expected = hmac.new(
                 SECRET.encode(),
                 encoded.encode(),
                 hashlib.sha256
@@ -485,21 +467,17 @@ def verify_token(
             return False
 
 
-        padding =
-            "=" * (
+        padding = "=" * (
                 -len(encoded) % 4
             )
 
 
-        raw =
-            base64.urlsafe_b64decode(
-                encoded +
-                padding
+        raw = base64.urlsafe_b64decode(
+                encoded + padding
             )
 
 
-        payload =
-            json.loads(
+        payload = json.loads(
                 raw.decode()
             )
 
@@ -524,29 +502,25 @@ def verify_token(
 
 def require_auth(
     credentials:
-        HTTPAuthorizationCredentials =
-        Depends(security)
+        HTTPAuthorizationCredentials = Depends(security)
 ):
 
     if credentials is None:
 
         raise HTTPException(
             status_code=401,
-            detail=
-                "Authentication required"
+            detail= "Authentication required"
         )
 
 
     if (
         credentials.scheme.lower()
-        !=
-        "bearer"
+        != "bearer"
     ):
 
         raise HTTPException(
             status_code=401,
-            detail=
-                "Invalid authentication"
+            detail= "Invalid authentication"
         )
 
 
@@ -556,18 +530,15 @@ def require_auth(
 
         raise HTTPException(
             status_code=401,
-            detail=
-                "Invalid or expired token"
+            detail= "Invalid or expired token"
         )
 
 
     return True
 
 
-# =========================================================
-# SUPABASE
-# =========================================================
-
+# ========================================================= # SUPABASE
+# ========================================================= 
 def supabase_headers():
 
     if (
@@ -578,8 +549,7 @@ def supabase_headers():
 
         raise HTTPException(
             status_code=500,
-            detail=
-                "Supabase environment variables missing"
+            detail= "Supabase environment variables missing"
         )
 
 
@@ -589,8 +559,7 @@ def supabase_headers():
             SUPABASE_KEY,
 
         "Authorization":
-            "Bearer " +
-            SUPABASE_KEY,
+            "Bearer " + SUPABASE_KEY,
 
         "Content-Type":
             "application/json",
@@ -603,12 +572,10 @@ def supabase_headers():
 
 def get_all_rows():
 
-    url =
-        f"{SUPABASE_URL}/rest/v1/{TABLE}"
+    url = f"{SUPABASE_URL}/rest/v1/{TABLE}"
 
 
-    headers =
-        supabase_headers()
+    headers = supabase_headers()
 
 
     all_rows = []
@@ -621,8 +588,7 @@ def get_all_rows():
 
     while True:
 
-        response =
-            requests.get(
+        response = requests.get(
 
                 url,
 
@@ -652,15 +618,12 @@ def get_all_rows():
 
                 status_code=500,
 
-                detail=
-                    "Supabase read error: " +
-                    response.text
+                detail= "Supabase read error: " + response.text
 
             )
 
 
-        rows =
-            response.json()
+        rows = response.json()
 
 
         if not rows:
@@ -682,30 +645,25 @@ def get_all_rows():
     return all_rows
 
 
-# =========================================================
-# DATABASE ROW
-# =========================================================
-
+# ========================================================= # DATABASE ROW
+# ========================================================= 
 def convert_database_row(
     item
 ):
 
-    sheet_name =
-        item.get(
+    sheet_name = item.get(
             "sheet",
             ""
         )
 
 
-    headers =
-        item.get(
+    headers = item.get(
             "headers",
             []
         )
 
 
-    row =
-        item.get(
+    row = item.get(
             "row",
             []
         )
@@ -738,8 +696,7 @@ def convert_database_row(
             str(
                 headers[i]
             )
-        ] =
-            clean_value(
+        ] = clean_value(
                 row[i]
                 if i < len(row)
                 else None
@@ -763,10 +720,8 @@ def convert_database_row(
     }
 
 
-# =========================================================
-# HOME
-# =========================================================
-
+# ========================================================= # HOME
+# ========================================================= 
 @app.get("/")
 def home():
 
@@ -784,25 +739,21 @@ def home():
     }
 
 
-# =========================================================
-# LOGIN
-# =========================================================
-
+# ========================================================= # LOGIN
+# ========================================================= 
 @app.post("/login")
 def login(
     data: dict
 ):
 
-    username =
-        text(
+    username = text(
             data.get(
                 "username"
             )
         )
 
 
-    password =
-        text(
+    password = text(
             data.get(
                 "password"
             )
@@ -825,8 +776,7 @@ def login(
 
     ):
 
-        token =
-            make_token(
+        token = make_token(
                 username
             )
 
@@ -852,37 +802,30 @@ def login(
 
         status_code=401,
 
-        detail=
-            "Invalid username or password"
+        detail= "Invalid username or password"
 
     )
 
 
-# =========================================================
-# SHEETS
-# =========================================================
-
+# ========================================================= # SHEETS
+# ========================================================= 
 @app.get("/sheets")
 def sheets(
     authenticated:
-        bool =
-        Depends(require_auth)
+        bool = Depends(require_auth)
 ):
 
     try:
 
-        rows =
-            get_all_rows()
+        rows = get_all_rows()
 
 
-        names =
-            set()
+        names = set()
 
 
         for item in rows:
 
-            name =
-                text(
+            name = text(
                     item.get(
                         "sheet"
                     )
@@ -895,8 +838,7 @@ def sheets(
                 )
 
 
-        names =
-            sorted(
+        names = sorted(
                 names
             )
 
@@ -925,10 +867,8 @@ def sheets(
         )
 
 
-# =========================================================
-# SINGLE SHEET
-# =========================================================
-
+# ========================================================= # SINGLE SHEET
+# ========================================================= 
 @app.get(
     "/sheet/{sheet_name}"
 )
@@ -939,15 +879,13 @@ def get_sheet(
     limit: int = 100,
 
     authenticated:
-        bool =
-        Depends(require_auth)
+        bool = Depends(require_auth)
 
 ):
 
     try:
 
-        rows =
-            get_all_rows()
+        rows = get_all_rows()
 
 
         results = []
@@ -963,22 +901,19 @@ def get_sheet(
                         "sheet"
                     )
                 )
-                !=
-                sheet_name
+                != sheet_name
             ):
                 continue
 
 
-            converted =
-                convert_database_row(
+            converted = convert_database_row(
                     item
                 )
 
 
             if not headers:
 
-                headers =
-                    converted[
+                headers = converted[
                         "headers"
                     ]
 
@@ -1000,14 +935,12 @@ def get_sheet(
 
                 status_code=404,
 
-                detail=
-                    f"Sheet '{sheet_name}' not found"
+                detail= f"Sheet '{sheet_name}' not found"
 
             )
 
 
-        limit =
-            max(
+        limit = max(
                 1,
                 min(
                     int(limit),
@@ -1016,8 +949,7 @@ def get_sheet(
             )
 
 
-        results =
-            results[
+        results = results[
                 :limit
             ]
 
@@ -1052,29 +984,24 @@ def get_sheet(
         )
 
 
-# =========================================================
-# SEARCH
-# =========================================================
-
+# ========================================================= # SEARCH
+# ========================================================= 
 @app.get("/search")
 def search(
 
     q: str,
 
     sheet:
-        str =
-        "ALL SHEETS",
+        str = "ALL SHEETS",
 
     authenticated:
-        bool =
-        Depends(require_auth)
+        bool = Depends(require_auth)
 
 ):
 
     try:
 
-        search_text =
-            text(
+        search_text = text(
                 q
             ).lower()
 
@@ -1098,8 +1025,7 @@ def search(
             }
 
 
-        rows =
-            get_all_rows()
+        rows = get_all_rows()
 
 
         results = []
@@ -1107,8 +1033,7 @@ def search(
 
         for item in rows:
 
-            sheet_name =
-                text(
+            sheet_name = text(
                     item.get(
                         "sheet"
                     )
@@ -1116,24 +1041,20 @@ def search(
 
 
             if (
-                sheet !=
-                "ALL SHEETS"
+                sheet != "ALL SHEETS"
                 and
-                sheet_name !=
-                sheet
+                sheet_name != sheet
             ):
 
                 continue
 
 
-            converted =
-                convert_database_row(
+            converted = convert_database_row(
                     item
                 )
 
 
-            record =
-                converted[
+            record = converted[
                     "data"
                 ]
 
@@ -1209,25 +1130,20 @@ def search(
         )
 
 
-# =========================================================
-# DASHBOARD
-# =========================================================
-
+# ========================================================= # DASHBOARD
+# ========================================================= 
 @app.get("/dashboard")
 def dashboard(
     authenticated:
-        bool =
-        Depends(require_auth)
+        bool = Depends(require_auth)
 ):
 
     try:
 
-        rows =
-            get_all_rows()
+        rows = get_all_rows()
 
 
-        today =
-            datetime.now().date()
+        today = datetime.now().date()
 
 
         orders = []
@@ -1239,16 +1155,14 @@ def dashboard(
 
         for item in rows:
 
-            sheet =
-                text(
+            sheet = text(
                     item.get(
                         "sheet"
                     )
                 )
 
 
-            converted =
-                convert_database_row(
+            converted = convert_database_row(
                     item
                 )
 
@@ -1285,8 +1199,7 @@ def dashboard(
 
         order_quantity = 0
 
-        order_numbers =
-            set()
+        order_numbers = set()
 
         today_orders = 0
 
@@ -1299,15 +1212,12 @@ def dashboard(
 
         for item in orders:
 
-            row =
-                item["row"]
+            row = item["row"]
 
-            record =
-                item["data"]
+            record = item["data"]
 
 
-            order_no =
-                first_existing(
+            order_no = first_existing(
                     record,
                     [
                         "Order No.",
@@ -1316,8 +1226,7 @@ def dashboard(
                 )
 
 
-            party =
-                text(
+            party = text(
                     first_existing(
                         record,
                         [
@@ -1329,8 +1238,7 @@ def dashboard(
                 )
 
 
-            size =
-                normalize_size(
+            size = normalize_size(
                     first_existing(
                         record,
                         [
@@ -1341,8 +1249,7 @@ def dashboard(
                 )
 
 
-            quantity =
-                number(
+            quantity = number(
                     first_existing(
                         record,
                         [
@@ -1354,8 +1261,7 @@ def dashboard(
                 )
 
 
-            row_date =
-                date_only(
+            row_date = date_only(
                     first_existing(
                         record,
                         [
@@ -1366,8 +1272,7 @@ def dashboard(
                 )
 
 
-            destination =
-                text(
+            destination = text(
                     get_row_position(
                         row,
                         9
@@ -1461,8 +1366,7 @@ def dashboard(
                     quantity
 
 
-                destination_key =
-                    destination or "-"
+                destination_key = destination or "-"
 
 
                 if (
@@ -1494,8 +1398,7 @@ def dashboard(
                     }
 
 
-                destination_item =
-                    party_data[
+                destination_item = party_data[
                         party
                     ]["destinations"][
                         destination_key
@@ -1512,8 +1415,7 @@ def dashboard(
                 ] += quantity
 
 
-                size_key =
-                    size or "-"
+                size_key = size or "-"
 
 
                 if (
@@ -1576,15 +1478,12 @@ def dashboard(
                 continue
 
 
-            row =
-                item["row"]
+            row = item["row"]
 
-            record =
-                item["data"]
+            record = item["data"]
 
 
-            quantity =
-                number(
+            quantity = number(
                     get_row_position(
                         row,
                         6
@@ -1592,8 +1491,7 @@ def dashboard(
                 )
 
 
-            row_date =
-                date_only(
+            row_date = date_only(
                     get_row_position(
                         row,
                         11
@@ -1618,8 +1516,7 @@ def dashboard(
 
         for item in hold:
 
-            record =
-                item["data"]
+            record = item["data"]
 
 
             hold_quantity += \
@@ -1642,8 +1539,7 @@ def dashboard(
 
         for item in size_wise:
 
-            item["quantity"] =
-                clean_number(
+            item["quantity"] = clean_number(
                     item["quantity"]
                 )
 
@@ -1818,8 +1714,7 @@ def dashboard(
 
                 "total_rows":
                     len(dispatch)
-                    -
-                    cancelled_dispatch_rows,
+                    - cancelled_dispatch_rows,
 
                 "total_quantity":
                     clean_number(
@@ -1882,27 +1777,22 @@ def dashboard(
         )
 
 
-# =========================================================
-# MONTHS
-# =========================================================
-
+# ========================================================= # MONTHS
+# ========================================================= 
 @app.get(
     "/monthly-report/months"
 )
 def monthly_report_months(
     authenticated:
-        bool =
-        Depends(require_auth)
+        bool = Depends(require_auth)
 ):
 
     try:
 
-        rows =
-            get_all_rows()
+        rows = get_all_rows()
 
 
-        months =
-            set()
+        months = set()
 
 
         for item in rows:
@@ -1913,8 +1803,7 @@ def monthly_report_months(
                         "sheet"
                     )
                 )
-                !=
-                "Dispatched Orders"
+                != "Dispatched Orders"
             ):
 
                 continue
@@ -1928,20 +1817,17 @@ def monthly_report_months(
                 continue
 
 
-            converted =
-                convert_database_row(
+            converted = convert_database_row(
                     item
                 )
 
 
-            record =
-                converted[
+            record = converted[
                     "data"
                 ]
 
 
-            row_date =
-                date_only(
+            row_date = date_only(
                     get_row_position(
                         converted[
                             "row"
@@ -2012,10 +1898,8 @@ def monthly_report_months(
         )
 
 
-# =========================================================
-# DAILY PCS DISPATCH
-# =========================================================
-
+# ========================================================= # DAILY PCS DISPATCH
+# ========================================================= 
 @app.get(
     "/monthly-report/daily-pcs-dispatch"
 )
@@ -2026,8 +1910,7 @@ def daily_pcs_dispatch(
     month: int,
 
     authenticated:
-        bool =
-        Depends(require_auth)
+        bool = Depends(require_auth)
 
 ):
 
@@ -2049,12 +1932,10 @@ def daily_pcs_dispatch(
             )
 
 
-        rows =
-            get_all_rows()
+        rows = get_all_rows()
 
 
-        days_in_month =
-            calendar.monthrange(
+        days_in_month = calendar.monthrange(
                 year,
                 month
             )[1]
@@ -2099,8 +1980,7 @@ def daily_pcs_dispatch(
                         "sheet"
                     )
                 )
-                !=
-                "Dispatched Orders"
+                != "Dispatched Orders"
             ):
 
                 continue
@@ -2116,20 +1996,17 @@ def daily_pcs_dispatch(
                 continue
 
 
-            converted =
-                convert_database_row(
+            converted = convert_database_row(
                     item
                 )
 
 
-            row =
-                converted[
+            row = converted[
                     "row"
                 ]
 
 
-            row_date =
-                date_only(
+            row_date = date_only(
                     get_row_position(
                         row,
                         11
@@ -2150,8 +2027,7 @@ def daily_pcs_dispatch(
                 continue
 
 
-            material_type =
-                text(
+            material_type = text(
                     get_row_position(
                         row,
                         13
@@ -2159,14 +2035,12 @@ def daily_pcs_dispatch(
                 )
 
 
-            normalized =
-                normalize_material(
+            normalized = normalize_material(
                     material_type
                 )
 
 
-            report_column =
-                MATERIAL_MAPPING.get(
+            report_column = MATERIAL_MAPPING.get(
                     normalized
                 )
 
@@ -2175,8 +2049,7 @@ def daily_pcs_dispatch(
                 continue
 
 
-            quantity =
-                number(
+            quantity = number(
                     get_row_position(
                         row,
                         6
@@ -2220,8 +2093,7 @@ def daily_pcs_dispatch(
 
             total[
                 material
-            ] =
-                clean_number(
+            ] = clean_number(
                     value
                 )
 
@@ -2247,8 +2119,7 @@ def daily_pcs_dispatch(
 
                 item[
                     material
-                ] =
-                    clean_number(
+                ] = clean_number(
                         daily_data[
                             day_number
                         ][material]
@@ -2260,8 +2131,7 @@ def daily_pcs_dispatch(
             )
 
 
-        month_title =
-            f"{calendar.month_name[month].upper()}- {year} MONTHLY PCS DISPATCH QUANTITY"
+        month_title = f"{calendar.month_name[month].upper()}- {year} MONTHLY PCS DISPATCH QUANTITY"
 
 
         return {
@@ -2316,53 +2186,43 @@ def daily_pcs_dispatch(
         )
 
 
-# =========================================================
-# CURRENT MONTH
-# =========================================================
-
+# ========================================================= # CURRENT MONTH
+# ========================================================= 
 @app.get(
     "/monthly-report/daily-pcs-dispatch/current"
 )
 def current_month_daily_pcs_dispatch(
     authenticated:
-        bool =
-        Depends(require_auth)
+        bool = Depends(require_auth)
 ):
 
-    today =
-        datetime.now().date()
+    today = datetime.now().date()
 
 
     return daily_pcs_dispatch(
 
-        year=
-            today.year,
+        year= today.year,
 
-        month=
-            today.month,
+        month= today.month,
 
         authenticated=True
 
     )
 
 
-# =========================================================
-# MATERIAL MAPPING
-# =========================================================
-
+# ========================================================= # MATERIAL MAPPING
+# ========================================================= 
 @app.get(
     "/monthly-report/material-mapping"
 )
 def material_mapping(
     authenticated:
-        bool =
-        Depends(require_auth)
+        bool = Depends(require_auth)
 ):
 
     try:
 
-        rows =
-            get_all_rows()
+        rows = get_all_rows()
 
 
         actual_types = {}
@@ -2376,27 +2236,23 @@ def material_mapping(
                         "sheet"
                     )
                 )
-                !=
-                "Dispatched Orders"
+                != "Dispatched Orders"
             ):
 
                 continue
 
 
-            converted =
-                convert_database_row(
+            converted = convert_database_row(
                     item
                 )
 
 
-            record =
-                converted[
+            record = converted[
                     "data"
                 ]
 
 
-            material_type =
-                text(
+            material_type = text(
                     first_existing(
                         record,
                         [
@@ -2412,14 +2268,12 @@ def material_mapping(
                 continue
 
 
-            normalized =
-                normalize_material(
+            normalized = normalize_material(
                     material_type
                 )
 
 
-            mapped_to =
-                MATERIAL_MAPPING.get(
+            mapped_to = MATERIAL_MAPPING.get(
                     normalized
                 )
 
@@ -2469,15 +2323,16 @@ def material_mapping(
             detail=str(e)
         )
 
-# =========================================================
-# TEST REPORT - PARTY MASTER
-# =========================================================
 
+# ========================================================= # TEST REPORT - PARTY MASTER
+# ========================================================= 
 def _test_report_master():
 
     rows = get_all_rows()
 
+
     parties = {}
+
 
     for item in rows:
 
@@ -2487,81 +2342,105 @@ def _test_report_master():
                     "sheet"
                 )
             )
-            !=
-            "PARTIES"
+            != "PARTIES"
         ):
+
             continue
 
+
         row = item.get(
-            "row",
-            []
-        )
+                "row",
+                []
+            )
+
 
         if not isinstance(
             row,
             list
         ):
+
             continue
+
 
         # PARTIES SHEET:
         # A = PARTY NAME
         # B = ADDRESS
 
         party = text(
-            get_row_position(
-                row,
-                1
+                get_row_position(
+                    row,
+                    1
+                )
             )
-        )
+
 
         address = text(
-            get_row_position(
-                row,
-                2
+                get_row_position(
+                    row,
+                    2
+                )
             )
-        )
+
 
         if not party:
             continue
 
+
         header = party.upper()
 
+
         if header in {
+
             "PARTY",
             "PARTY NAME",
             "PARTIES",
             "PARTIES PLANTS",
             "PARTIES PLANTS NAME",
             "CUSTOMER NAME"
+
         }:
+
             continue
+
 
         parties[
             party
         ] = address
 
+
     result = [
+
         {
+
             "party":
                 party,
+
             "address":
                 address
+
         }
+
         for party, address
         in sorted(
             parties.items(),
             key=lambda x:
                 x[0].upper()
         )
+
     ]
 
+
     return {
+
         "sheet":
             "PARTIES",
+
         "count":
             len(result),
+
         "parties":
             result
+
     }
 
 
@@ -2570,16 +2449,18 @@ def _test_report_master():
 )
 def test_report_master_data(
     authenticated:
-        bool =
-        Depends(require_auth)
+        bool = Depends(require_auth)
 ):
 
     try:
 
         return _test_report_master()
 
+
     except HTTPException:
+
         raise
+
 
     except Exception as e:
 
@@ -2589,29 +2470,24 @@ def test_report_master_data(
         )
 
 
-# =========================================================
-# TEST REPORT - SIZE PARSER
-# =========================================================
-
+# ========================================================= # TEST REPORT - SIZE PARSER
+# ========================================================= 
 def parse_size_pattern(
     value
 ):
 
-    s =
-        text(
+    s = text(
             value
         ).upper()
 
 
-    s =
-        s.replace(
+    s = s.replace(
             " ",
             ""
         )
 
 
-    s =
-        s.replace(
+    s = s.replace(
             "×",
             "X"
         )
@@ -2624,8 +2500,7 @@ def parse_size_pattern(
         )
 
 
-    left, right =
-        s.split(
+    left, right = s.split(
             "X",
             1
         )
@@ -2633,8 +2508,7 @@ def parse_size_pattern(
 
     def nums(part):
 
-        values =
-            part.split(
+        values = part.split(
                 "+"
             )
 
@@ -2671,14 +2545,12 @@ def parse_size_pattern(
         return result
 
 
-    a =
-        nums(
+    a = nums(
             left
         )
 
 
-    b =
-        nums(
+    b = nums(
             right
         )
 
@@ -2849,8 +2721,7 @@ def test_report_parse_size(
     size: str,
 
     authenticated:
-        bool =
-        Depends(require_auth)
+        bool = Depends(require_auth)
 
 ):
 
@@ -2875,20 +2746,16 @@ def test_report_parse_size(
         )
 
 
-# =========================================================
-# TEST REPORT - BILL NUMBER
-# =========================================================
-
+# ========================================================= # TEST REPORT - BILL NUMBER
+# ========================================================= 
 def next_bill_number(
     prefix="MP/26-27/"
 ):
 
-    rows =
-        get_all_rows()
+    rows = get_all_rows()
 
 
-    highest =
-        408
+    highest = 408
 
 
     for item in rows:
@@ -2899,27 +2766,23 @@ def next_bill_number(
                     "sheet"
                 )
             )
-            !=
-            "Dispatched Orders"
+            != "Dispatched Orders"
         ):
 
             continue
 
 
-        converted =
-            convert_database_row(
+        converted = convert_database_row(
                 item
             )
 
 
-        record =
-            converted[
+        record = converted[
                 "data"
             ]
 
 
-        invoice =
-            text(
+        invoice = text(
                 first_existing(
                     record,
                     [
@@ -2935,8 +2798,7 @@ def next_bill_number(
             continue
 
 
-        value =
-            invoice.strip()
+        value = invoice.strip()
 
 
         if not value.upper().startswith(
@@ -2946,24 +2808,21 @@ def next_bill_number(
             continue
 
 
-        tail =
-            value[
+        tail = value[
                 len(prefix):
             ].strip()
 
 
         if tail.isdigit():
 
-            highest =
-                max(
+            highest = max(
                     highest,
                     int(tail)
                 )
 
 
     return (
-        prefix +
-        str(
+        prefix + str(
             highest + 1
         )
     )
@@ -2977,15 +2836,13 @@ def reserve_test_bill(
     data: dict,
 
     authenticated:
-        bool =
-        Depends(require_auth)
+        bool = Depends(require_auth)
 
 ):
 
     try:
 
-        mode =
-            text(
+        mode = text(
                 data.get(
                     "mode"
                 )
@@ -2994,8 +2851,7 @@ def reserve_test_bill(
             ).upper()
 
 
-        manual_bill =
-            text(
+        manual_bill = text(
                 data.get(
                     "bill_no"
                 )
@@ -3008,8 +2864,7 @@ def reserve_test_bill(
 
                 raise HTTPException(
                     status_code=400,
-                    detail=
-                        "Manual Bill No. required"
+                    detail= "Manual Bill No. required"
                 )
 
 
@@ -3025,8 +2880,7 @@ def reserve_test_bill(
 
             raise HTTPException(
                 status_code=400,
-                detail=
-                    "Invalid bill mode"
+                detail= "Invalid bill mode"
             )
 
 
@@ -3053,10 +2907,8 @@ def reserve_test_bill(
         )
 
 
-# =========================================================
-# TEST REPORT - GENERATION
-# =========================================================
-
+# ========================================================= # TEST REPORT - GENERATION
+# ========================================================= 
 def rand_int(
     minimum,
     maximum
@@ -3072,8 +2924,7 @@ def fmt_mm(
     value
 ):
 
-    value =
-        float(
+    value = float(
             value
         )
 
@@ -3099,8 +2950,7 @@ def actual_total(
 
     return fmt_mm(
         float(value)
-        +
-        rand_int(
+        + rand_int(
             -5,
             5
         )
@@ -3113,8 +2963,7 @@ def actual_tab(
 
     return fmt_mm(
         float(value)
-        +
-        rand_int(
+        + rand_int(
             -3,
             3
         )
@@ -3125,13 +2974,10 @@ def actual_thickness(
     value
 ):
 
-    value =
-        float(value)
+    value = float(value)
 
 
-    actual =
-        value +
-        random.uniform(
+    actual = value + random.uniform(
             -0.05,
             0.05
         )
@@ -3156,8 +3002,7 @@ def tc_standard(
     thickness
 ):
 
-    t =
-        float(
+    t = float(
             thickness
         )
 
@@ -3189,8 +3034,7 @@ def actual_tc(
     thickness
 ):
 
-    standard =
-        tc_standard(
+    standard = tc_standard(
             thickness
         )
 
@@ -3288,8 +3132,7 @@ def test_report_rows(
             return (
                 fmt_mm(
                     parsed["length"]
-                ) +
-                "mm",
+                ) + "mm",
 
                 "±10mm"
             )
@@ -3300,8 +3143,7 @@ def test_report_rows(
             return (
                 fmt_mm(
                     parsed["width"]
-                ) +
-                "mm",
+                ) + "mm",
 
                 "±10mm"
             )
@@ -3309,8 +3151,7 @@ def test_report_rows(
 
         if name == "1 Tab at Length":
 
-            value =
-                parsed.get(
+            value = parsed.get(
                     "tab_length",
                     parsed.get(
                         "tab_length_1"
@@ -3321,8 +3162,7 @@ def test_report_rows(
             return (
                 fmt_mm(
                     value
-                ) +
-                "mm",
+                ) + "mm",
 
                 "±5mm"
             )
@@ -3335,8 +3175,7 @@ def test_report_rows(
                     parsed[
                         "tab_length_2"
                     ]
-                ) +
-                "mm",
+                ) + "mm",
 
                 "±5mm"
             )
@@ -3344,8 +3183,7 @@ def test_report_rows(
 
         if name == "1 Tab at Width":
 
-            value =
-                parsed.get(
+            value = parsed.get(
                     "tab_width",
                     parsed.get(
                         "tab_width_1"
@@ -3356,8 +3194,7 @@ def test_report_rows(
             return (
                 fmt_mm(
                     value
-                ) +
-                "mm",
+                ) + "mm",
 
                 "±5mm"
             )
@@ -3370,8 +3207,7 @@ def test_report_rows(
                     parsed[
                         "tab_width_2"
                     ]
-                ) +
-                "mm",
+                ) + "mm",
 
                 "±5mm"
             )
@@ -3382,8 +3218,7 @@ def test_report_rows(
             return (
                 fmt_mm(
                     thickness
-                ) +
-                "mm",
+                ) + "mm",
 
                 "±0.3mm"
             )
@@ -3399,8 +3234,7 @@ def test_report_rows(
 
         if name == "TC":
 
-            standard =
-                tc_standard(
+            standard = tc_standard(
                     thickness
                 )
 
@@ -3651,8 +3485,7 @@ def test_report_rows(
 
     for name in names:
 
-        standard, tolerance =
-            standard_for(
+        standard, tolerance = standard_for(
                 name
             )
 
@@ -3693,55 +3526,48 @@ def generate_test_report(
     data: dict,
 
     authenticated:
-        bool =
-        Depends(require_auth)
+        bool = Depends(require_auth)
 
 ):
 
     try:
 
-        party =
-            text(
+        party = text(
                 data.get(
                     "party"
                 )
             )
 
 
-        address =
-            text(
+        address = text(
                 data.get(
                     "address"
                 )
             )
 
 
-        size =
-            text(
+        size = text(
                 data.get(
                     "size"
                 )
             )
 
 
-        thickness =
-            number(
+        thickness = number(
                 data.get(
                     "thickness"
                 )
             )
 
 
-        gsm =
-            text(
+        gsm = text(
                 data.get(
                     "gsm"
                 )
             )
 
 
-        po_mode =
-            text(
+        po_mode = text(
                 data.get(
                     "po_mode"
                 )
@@ -3750,24 +3576,21 @@ def generate_test_report(
             ).upper()
 
 
-        po_no =
-            text(
+        po_no = text(
                 data.get(
                     "po_no"
                 )
             )
 
 
-        po_date =
-            text(
+        po_date = text(
                 data.get(
                     "po_date"
                 )
             )
 
 
-        bill_mode =
-            text(
+        bill_mode = text(
                 data.get(
                     "bill_mode"
                 )
@@ -3776,32 +3599,28 @@ def generate_test_report(
             ).upper()
 
 
-        manual_bill =
-            text(
+        manual_bill = text(
                 data.get(
                     "bill_no"
                 )
             )
 
 
-        bill_date =
-            text(
+        bill_date = text(
                 data.get(
                     "bill_date"
                 )
             )
 
 
-        drawing =
-            text(
+        drawing = text(
                 data.get(
                     "drawing"
                 )
             )
 
 
-        specification =
-            text(
+        specification = text(
                 data.get(
                     "specification"
                 )
@@ -3812,8 +3631,7 @@ def generate_test_report(
 
             raise HTTPException(
                 status_code=400,
-                detail=
-                    "Party select karo"
+                detail= "Party select karo"
             )
 
 
@@ -3821,8 +3639,7 @@ def generate_test_report(
 
             raise HTTPException(
                 status_code=400,
-                detail=
-                    "Size bharo"
+                detail= "Size bharo"
             )
 
 
@@ -3830,8 +3647,7 @@ def generate_test_report(
 
             raise HTTPException(
                 status_code=400,
-                detail=
-                    "Thickness sahi bharo"
+                detail= "Thickness sahi bharo"
             )
 
 
@@ -3845,8 +3661,7 @@ def generate_test_report(
 
             raise HTTPException(
                 status_code=400,
-                detail=
-                    "Invalid PO mode"
+                detail= "Invalid PO mode"
             )
 
 
@@ -3858,8 +3673,7 @@ def generate_test_report(
 
             raise HTTPException(
                 status_code=400,
-                detail=
-                    "Manual PO No. bharo"
+                detail= "Manual PO No. bharo"
             )
 
 
@@ -3872,21 +3686,18 @@ def generate_test_report(
 
             raise HTTPException(
                 status_code=400,
-                detail=
-                    "Invalid bill mode"
+                detail= "Invalid bill mode"
             )
 
 
-        parsed =
-            parse_size_pattern(
+        parsed = parse_size_pattern(
                 size
             )
 
 
         if bill_mode == "AUTO NEXT":
 
-            bill_no =
-                next_bill_number(
+            bill_no = next_bill_number(
                     "MP/26-27/"
                 )
 
@@ -3896,29 +3707,24 @@ def generate_test_report(
 
                 raise HTTPException(
                     status_code=400,
-                    detail=
-                        "Manual Bill No. bharo"
+                    detail= "Manual Bill No. bharo"
                 )
 
 
-            bill_no =
-                manual_bill
+            bill_no = manual_bill
 
 
         if po_mode == "AS PER SHEET":
 
-            display_po =
-                "AS PER SHEET"
+            display_po = "AS PER SHEET"
 
         elif po_mode == "VERBAL":
 
-            display_po =
-                "VERBAL"
+            display_po = "VERBAL"
 
         else:
 
-            display_po =
-                po_no
+            display_po = po_no
 
 
         return {
