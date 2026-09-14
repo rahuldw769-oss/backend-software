@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from datetime import datetime, date
+from datetime import datetime, date, timezone, timedelta
 import os
 import hmac
 import hashlib
@@ -62,6 +62,16 @@ SUPABASE_KEY = os.getenv(
 
 
 TABLE = "excel_rows"
+
+# India timezone — all dashboard, daily dispatch and monthly report
+# date calculations use IST instead of the Render server timezone.
+IST = timezone(timedelta(hours=5, minutes=30))
+
+def india_now():
+    return datetime.now(IST)
+
+def india_today():
+    return india_now().date()
 
 
 # ========================================================= # MONTHLY MATERIALS
@@ -1143,7 +1153,7 @@ def dashboard(
         rows = get_all_rows()
 
 
-        today = datetime.now().date()
+        today = india_today()
 
 
         orders = []
@@ -2196,7 +2206,7 @@ def current_month_daily_pcs_dispatch(
         bool = Depends(require_auth)
 ):
 
-    today = datetime.now().date()
+    today = india_today()
 
 
     return daily_pcs_dispatch(
