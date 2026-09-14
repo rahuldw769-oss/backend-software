@@ -2469,19 +2469,15 @@ def material_mapping(
             detail=str(e)
         )
 
-
 # =========================================================
 # TEST REPORT - PARTY MASTER
 # =========================================================
 
 def _test_report_master():
 
-    rows =
-        get_all_rows()
-
+    rows = get_all_rows()
 
     parties = {}
-
 
     for item in rows:
 
@@ -2494,108 +2490,78 @@ def _test_report_master():
             !=
             "PARTIES"
         ):
-
             continue
 
-
-        row =
-            item.get(
-                "row",
-                []
-            )
-
+        row = item.get(
+            "row",
+            []
+        )
 
         if not isinstance(
             row,
             list
         ):
-
             continue
-
 
         # PARTIES SHEET:
         # A = PARTY NAME
         # B = ADDRESS
 
-        party =
-            text(
-                get_row_position(
-                    row,
-                    1
-                )
+        party = text(
+            get_row_position(
+                row,
+                1
             )
+        )
 
-
-        address =
-            text(
-                get_row_position(
-                    row,
-                    2
-                )
+        address = text(
+            get_row_position(
+                row,
+                2
             )
-
+        )
 
         if not party:
             continue
 
-
-        header =
-            party.upper()
-
+        header = party.upper()
 
         if header in {
-
             "PARTY",
             "PARTY NAME",
             "PARTIES",
             "PARTIES PLANTS",
             "PARTIES PLANTS NAME",
             "CUSTOMER NAME"
-
         }:
-
             continue
-
 
         parties[
             party
-        ] =
-            address
-
+        ] = address
 
     result = [
-
         {
-
             "party":
                 party,
-
             "address":
                 address
-
         }
-
         for party, address
         in sorted(
             parties.items(),
             key=lambda x:
                 x[0].upper()
         )
-
     ]
 
-
     return {
-
         "sheet":
             "PARTIES",
-
         "count":
             len(result),
-
         "parties":
             result
-
     }
 
 
@@ -2612,11 +2578,8 @@ def test_report_master_data(
 
         return _test_report_master()
 
-
     except HTTPException:
-
         raise
-
 
     except Exception as e:
 
