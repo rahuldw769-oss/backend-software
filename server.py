@@ -11,10 +11,12 @@ import json
 import requests
 import calendar
 import random
-from google import genai
 
-# ========================================================= # APP
-# ========================================================= 
+
+# =========================================================
+# APP
+# =========================================================
+
 app = FastAPI(
     title="Rahul Software API"
 )
@@ -34,8 +36,10 @@ security = HTTPBearer(
 )
 
 
-# ========================================================= # LOGIN / ENVIRONMENT
-# ========================================================= 
+# =========================================================
+# LOGIN / ENVIRONMENT
+# =========================================================
+
 USERNAME = os.getenv(
     "RAHUL_USERNAME",
     "rahul"
@@ -59,19 +63,30 @@ SUPABASE_URL = os.getenv(
 SUPABASE_KEY = os.getenv(
     "SUPABASE_KEY"
 )
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    gemini_client = genai.Client(
-        api_key=GEMINI_API_KEY
-    )
-else:
-    gemini_client = None
-    
+
+
+# =========================================================
+# LOCAL AI - OLLAMA
+# =========================================================
+
+OLLAMA_URL = os.getenv(
+    "OLLAMA_URL",
+    "http://127.0.0.1:11434"
+)
+
+OLLAMA_MODEL = os.getenv(
+    "OLLAMA_MODEL",
+    "qwen3:4b"
+)
+
+
 TABLE = "excel_rows"
 
 
-# ========================================================= # MONTHLY MATERIALS
-# ========================================================= 
+# =========================================================
+# MONTHLY MATERIALS
+# =========================================================
+
 MONTHLY_MATERIALS = [
 
     "SLIPSHEET",
@@ -198,8 +213,10 @@ MATERIAL_MAPPING = {
 }
 
 
-# ========================================================= # BASIC HELPERS
-# ========================================================= 
+# =========================================================
+# BASIC HELPERS
+# =========================================================
+
 def text(value):
 
     if value is None:
@@ -318,7 +335,6 @@ def first_existing(
     for name in names:
 
         if name in record:
-
             return record[name]
 
     return None
@@ -400,8 +416,10 @@ def get_row_position(
     return row[index]
 
 
-# ========================================================= # TOKEN
-# ========================================================= 
+# =========================================================
+# TOKEN
+# =========================================================
+
 def make_token(
     username
 ):
@@ -459,10 +477,10 @@ def verify_token(
 
 
         expected = hmac.new(
-                SECRET.encode(),
-                encoded.encode(),
-                hashlib.sha256
-            ).hexdigest()
+            SECRET.encode(),
+            encoded.encode(),
+            hashlib.sha256
+        ).hexdigest()
 
 
         if not hmac.compare_digest(
@@ -515,7 +533,7 @@ def require_auth(
 
         raise HTTPException(
             status_code=401,
-            detail= "Authentication required"
+            detail="Authentication required"
         )
 
 
@@ -526,7 +544,7 @@ def require_auth(
 
         raise HTTPException(
             status_code=401,
-            detail= "Invalid authentication"
+            detail="Invalid authentication"
         )
 
 
@@ -536,15 +554,17 @@ def require_auth(
 
         raise HTTPException(
             status_code=401,
-            detail= "Invalid or expired token"
+            detail="Invalid or expired token"
         )
 
 
     return True
 
 
-# ========================================================= # SUPABASE
-# ========================================================= 
+# =========================================================
+# SUPABASE
+# =========================================================
+
 def supabase_headers():
 
     if (
@@ -555,7 +575,7 @@ def supabase_headers():
 
         raise HTTPException(
             status_code=500,
-            detail= "Supabase environment variables missing"
+            detail="Supabase environment variables missing"
         )
 
 
@@ -624,7 +644,7 @@ def get_all_rows():
 
                 status_code=500,
 
-                detail= "Supabase read error: " + response.text
+                detail="Supabase read error: " + response.text
 
             )
 
@@ -651,8 +671,10 @@ def get_all_rows():
     return all_rows
 
 
-# ========================================================= # DATABASE ROW
-# ========================================================= 
+# =========================================================
+# DATABASE ROW
+# =========================================================
+
 def convert_database_row(
     item
 ):
@@ -726,8 +748,10 @@ def convert_database_row(
     }
 
 
-# ========================================================= # HOME
-# ========================================================= 
+# =========================================================
+# HOME
+# =========================================================
+
 @app.get("/")
 def home():
 
@@ -740,13 +764,18 @@ def home():
             "Rahul Software API is running",
 
         "database":
-            "Supabase"
+            "Supabase",
+
+        "ai":
+            "Ollama / " + OLLAMA_MODEL
 
     }
 
 
-# ========================================================= # LOGIN
-# ========================================================= 
+# =========================================================
+# LOGIN
+# =========================================================
+
 @app.post("/login")
 def login(
     data: dict
@@ -808,13 +837,15 @@ def login(
 
         status_code=401,
 
-        detail= "Invalid username or password"
+        detail="Invalid username or password"
 
     )
 
 
-# ========================================================= # SHEETS
-# ========================================================= 
+# =========================================================
+# SHEETS
+# =========================================================
+
 @app.get("/sheets")
 def sheets(
     authenticated:
@@ -873,8 +904,10 @@ def sheets(
         )
 
 
-# ========================================================= # SINGLE SHEET
-# ========================================================= 
+# =========================================================
+# SINGLE SHEET
+# =========================================================
+
 @app.get(
     "/sheet/{sheet_name}"
 )
@@ -941,7 +974,7 @@ def get_sheet(
 
                 status_code=404,
 
-                detail= f"Sheet '{sheet_name}' not found"
+                detail=f"Sheet '{sheet_name}' not found"
 
             )
 
@@ -990,8 +1023,10 @@ def get_sheet(
         )
 
 
-# ========================================================= # SEARCH
-# ========================================================= 
+# =========================================================
+# SEARCH
+# =========================================================
+
 @app.get("/search")
 def search(
 
@@ -1136,8 +1171,10 @@ def search(
         )
 
 
-# ========================================================= # DASHBOARD
-# ========================================================= 
+# =========================================================
+# DASHBOARD
+# =========================================================
+
 @app.get("/dashboard")
 def dashboard(
     authenticated:
@@ -1305,8 +1342,7 @@ def dashboard(
 
                 today_orders += 1
 
-                today_order_quantity += \
-                    quantity
+                today_order_quantity += quantity
 
 
             if size:
@@ -1334,8 +1370,7 @@ def dashboard(
 
                 size_data[
                     size
-                ]["quantity"] += \
-                    quantity
+                ]["quantity"] += quantity
 
 
             if party:
@@ -1368,8 +1403,7 @@ def dashboard(
 
                 party_data[
                     party
-                ]["quantity"] += \
-                    quantity
+                ]["quantity"] += quantity
 
 
                 destination_key = destination or "-"
@@ -1459,8 +1493,7 @@ def dashboard(
                     "sizes"
                 ][
                     size_key
-                ]["quantity"] += \
-                    quantity
+                ]["quantity"] += quantity
 
 
         dispatch_quantity = 0
@@ -1505,16 +1538,14 @@ def dashboard(
                 )
 
 
-            dispatch_quantity += \
-                quantity
+            dispatch_quantity += quantity
 
 
             if row_date == today:
 
                 today_dispatch += 1
 
-                today_dispatch_quantity += \
-                    quantity
+                today_dispatch_quantity += quantity
 
 
         hold_quantity = 0
@@ -1783,8 +1814,10 @@ def dashboard(
         )
 
 
-# ========================================================= # MONTHS
-# ========================================================= 
+# =========================================================
+# MONTHS
+# =========================================================
+
 @app.get(
     "/monthly-report/months"
 )
@@ -1826,11 +1859,6 @@ def monthly_report_months(
             converted = convert_database_row(
                     item
                 )
-
-
-            record = converted[
-                    "data"
-                ]
 
 
             row_date = date_only(
@@ -1904,8 +1932,10 @@ def monthly_report_months(
         )
 
 
-# ========================================================= # DAILY PCS DISPATCH
-# ========================================================= 
+# =========================================================
+# DAILY PCS DISPATCH
+# =========================================================
+
 @app.get(
     "/monthly-report/daily-pcs-dispatch"
 )
@@ -2137,7 +2167,10 @@ def daily_pcs_dispatch(
             )
 
 
-        month_title = f"{calendar.month_name[month].upper()}- {year} MONTHLY PCS DISPATCH QUANTITY"
+        month_title = (
+            f"{calendar.month_name[month].upper()}- "
+            f"{year} MONTHLY PCS DISPATCH QUANTITY"
+        )
 
 
         return {
@@ -2192,8 +2225,10 @@ def daily_pcs_dispatch(
         )
 
 
-# ========================================================= # CURRENT MONTH
-# ========================================================= 
+# =========================================================
+# CURRENT MONTH
+# =========================================================
+
 @app.get(
     "/monthly-report/daily-pcs-dispatch/current"
 )
@@ -2207,17 +2242,19 @@ def current_month_daily_pcs_dispatch(
 
     return daily_pcs_dispatch(
 
-        year= today.year,
+        year=today.year,
 
-        month= today.month,
+        month=today.month,
 
         authenticated=True
 
     )
 
 
-# ========================================================= # MATERIAL MAPPING
-# ========================================================= 
+# =========================================================
+# MATERIAL MAPPING
+# =========================================================
+
 @app.get(
     "/monthly-report/material-mapping"
 )
@@ -2330,8 +2367,10 @@ def material_mapping(
         )
 
 
-# ========================================================= # TEST REPORT - PARTY MASTER
-# ========================================================= 
+# =========================================================
+# TEST REPORT - PARTY MASTER
+# =========================================================
+
 def _test_report_master():
 
     rows = get_all_rows()
@@ -2371,6 +2410,7 @@ def _test_report_master():
         # PARTIES SHEET:
         # A = PARTY NAME
         # B = ADDRESS
+
 
         party = text(
                 get_row_position(
@@ -2476,8 +2516,10 @@ def test_report_master_data(
         )
 
 
-# ========================================================= # TEST REPORT - SIZE PARSER
-# ========================================================= 
+# =========================================================
+# TEST REPORT - SIZE PARSER
+# =========================================================
+
 def parse_size_pattern(
     value
 ):
@@ -2737,12 +2779,14 @@ def test_report_parse_size(
             size
         )
 
+
     except ValueError as e:
 
         raise HTTPException(
             status_code=400,
             detail=str(e)
         )
+
 
     except Exception as e:
 
@@ -2752,8 +2796,10 @@ def test_report_parse_size(
         )
 
 
-# ========================================================= # TEST REPORT - BILL NUMBER
-# ========================================================= 
+# =========================================================
+# TEST REPORT - BILL NUMBER
+# =========================================================
+
 def next_bill_number(
     prefix="MP/26-27/"
 ):
@@ -2870,7 +2916,7 @@ def reserve_test_bill(
 
                 raise HTTPException(
                     status_code=400,
-                    detail= "Manual Bill No. required"
+                    detail="Manual Bill No. required"
                 )
 
 
@@ -2886,7 +2932,7 @@ def reserve_test_bill(
 
             raise HTTPException(
                 status_code=400,
-                detail= "Invalid bill mode"
+                detail="Invalid bill mode"
             )
 
 
@@ -2913,8 +2959,10 @@ def reserve_test_bill(
         )
 
 
-# ========================================================= # TEST REPORT - GENERATION
-# ========================================================= 
+# =========================================================
+# TEST REPORT - GENERATION
+# =========================================================
+
 def rand_int(
     minimum,
     maximum
@@ -2980,7 +3028,9 @@ def actual_thickness(
     value
 ):
 
-    value = float(value)
+    value = float(
+            value
+        )
 
 
     actual = value + random.uniform(
@@ -3637,7 +3687,7 @@ def generate_test_report(
 
             raise HTTPException(
                 status_code=400,
-                detail= "Party select karo"
+                detail="Party select karo"
             )
 
 
@@ -3645,7 +3695,7 @@ def generate_test_report(
 
             raise HTTPException(
                 status_code=400,
-                detail= "Size bharo"
+                detail="Size bharo"
             )
 
 
@@ -3653,7 +3703,7 @@ def generate_test_report(
 
             raise HTTPException(
                 status_code=400,
-                detail= "Thickness sahi bharo"
+                detail="Thickness sahi bharo"
             )
 
 
@@ -3667,7 +3717,7 @@ def generate_test_report(
 
             raise HTTPException(
                 status_code=400,
-                detail= "Invalid PO mode"
+                detail="Invalid PO mode"
             )
 
 
@@ -3679,7 +3729,7 @@ def generate_test_report(
 
             raise HTTPException(
                 status_code=400,
-                detail= "Manual PO No. bharo"
+                detail="Manual PO No. bharo"
             )
 
 
@@ -3692,7 +3742,7 @@ def generate_test_report(
 
             raise HTTPException(
                 status_code=400,
-                detail= "Invalid bill mode"
+                detail="Invalid bill mode"
             )
 
 
@@ -3713,9 +3763,8 @@ def generate_test_report(
 
                 raise HTTPException(
                     status_code=400,
-                    detail= "Manual Bill No. bharo"
+                    detail="Manual Bill No. bharo"
                 )
-
 
             bill_no = manual_bill
 
@@ -3797,40 +3846,44 @@ def generate_test_report(
             detail=str(e)
         )
 
+
 # =========================================================
-# AI CHAT - GEMINI
+# AI CHAT - LOCAL OLLAMA
 # =========================================================
 
 @app.post("/ai-chat")
 def ai_chat(
     data: dict,
-    authenticated: bool = Depends(require_auth)
+    authenticated:
+        bool = Depends(require_auth)
 ):
+
     try:
 
-        if gemini_client is None:
-            raise HTTPException(
-                status_code=500,
-                detail="GEMINI_API_KEY is not configured"
-            )
-
         message = text(
-            data.get("message")
+            data.get(
+                "message"
+            )
         )
 
+
         if not message:
+
             raise HTTPException(
                 status_code=400,
                 detail="Message is required"
             )
 
+
         if len(message) > 10000:
+
             raise HTTPException(
                 status_code=400,
                 detail="Message is too long"
             )
 
-        instructions = """
+
+        system_prompt = """
 You are Rahul AI Assistant inside Rahul Software.
 
 Rahul Software is a business operations system.
@@ -3889,31 +3942,178 @@ any business data.
 
 Keep answers concise unless the user asks for detailed
 explanation.
+
+You are running locally through Ollama.
+
+Do not mention Gemini, Google Gemini API, API keys,
+or cloud AI unless the user specifically asks about
+the AI architecture.
 """
 
-        prompt = instructions + "\n\nUSER QUESTION:\n" + message
 
-        response = gemini_client.models.generate_content(
-            model="gemini-3.8-flash",
-            contents=prompt
-        )
+        ollama_payload = {
 
-        answer = response.text
+            "model":
+                OLLAMA_MODEL,
 
-        if not answer:
-            answer = "AI ne koi response generate nahi kiya."
+            "stream":
+                False,
 
-        return {
-            "status": "success",
-            "answer": answer
+            "messages": [
+
+                {
+                    "role":
+                        "system",
+
+                    "content":
+                        system_prompt
+
+                },
+
+                {
+                    "role":
+                        "user",
+
+                    "content":
+                        message
+
+                }
+
+            ],
+
+            "options": {
+
+                "temperature":
+                    0.3
+
+            }
+
         }
 
+
+        response = requests.post(
+
+            OLLAMA_URL + "/api/chat",
+
+            json=ollama_payload,
+
+            timeout=180
+
+        )
+
+
+        if not response.ok:
+
+            raise HTTPException(
+
+                status_code=500,
+
+                detail=(
+                    "Ollama error: "
+                    + response.text
+                )
+
+            )
+
+
+        result = response.json()
+
+
+        answer = ""
+
+
+        if isinstance(
+            result,
+            dict
+        ):
+
+            message_data = result.get(
+                "message"
+            )
+
+
+            if isinstance(
+                message_data,
+                dict
+            ):
+
+                answer = text(
+                    message_data.get(
+                        "content"
+                    )
+                )
+
+
+            if not answer:
+
+                answer = text(
+                    result.get(
+                        "response"
+                    )
+                )
+
+
+        if not answer:
+
+            answer = (
+                "AI ne koi response "
+                "generate nahi kiya."
+            )
+
+
+        return {
+
+            "status":
+                "success",
+
+            "answer":
+                answer
+
+        }
+
+
     except HTTPException:
+
         raise
+
+
+    except requests.exceptions.ConnectionError:
+
+        raise HTTPException(
+
+            status_code=503,
+
+            detail=(
+                "Local AI server (Ollama) "
+                "connect nahi ho raha. "
+                "Check karo ki Ollama running hai "
+                "aur OLLAMA_URL sahi hai."
+            )
+
+        )
+
+
+    except requests.exceptions.Timeout:
+
+        raise HTTPException(
+
+            status_code=504,
+
+            detail=(
+                "Local AI response mein "
+                "bahut time lag raha hai. "
+                "Ollama model ya computer load check karo."
+            )
+
+        )
+
 
     except Exception as e:
 
         raise HTTPException(
+
             status_code=500,
+
             detail="AI error: " + str(e)
+
         )
