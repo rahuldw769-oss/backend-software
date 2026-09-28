@@ -3580,6 +3580,7 @@ function toggleAIChat(){
 }
 
 
+```javascript
 function appendAIMessage(message, type){
 
     const messages =
@@ -3598,8 +3599,7 @@ function appendAIMessage(message, type){
             ? "ai-message-user"
             : "ai-message-bot");
 
-    // IMPORTANT:
-    // textContent is used so AI response cannot inject HTML/JS.
+    // AI response ko safely plain text ke roop me show karega
     div.textContent = message;
 
     messages.appendChild(div);
@@ -3649,7 +3649,7 @@ async function sendAIMessage(){
 
     try{
 
-        const response =
+        const data =
             await apiFetch(
                 API_URL + "/ai-chat",
                 {
@@ -3665,18 +3665,21 @@ async function sendAIMessage(){
                 }
             );
 
-        const data =
-            await response.json();
-
         if(loading){
             loading.remove();
         }
 
-        if(!response.ok){
+        if(!data){
 
             throw new Error(
-                data.detail ||
-                "AI request failed"
+                "AI ne empty response diya."
+            );
+        }
+
+        if(data.detail){
+
+            throw new Error(
+                data.detail
             );
         }
 
@@ -3730,6 +3733,8 @@ document.addEventListener(
 
     }
 );
+```
+
 </script>
 </body>
 </html>
