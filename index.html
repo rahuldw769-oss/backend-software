@@ -1587,6 +1587,7 @@ async function login(){
                     headers:{
                         "Content-Type":
                             "application/json",
+
                         "Accept":
                             "application/json"
                     },
@@ -1602,10 +1603,15 @@ async function login(){
         let data = {};
 
         try{
-            data = await response.json();
+
+            data =
+                await response.json();
+
         }
         catch(e){
+
             data = {};
+
         }
 
 
@@ -1673,7 +1679,6 @@ async function login(){
 
 /* =========================
    API FETCH
-   FIXED
 ========================= */
 
 async function apiFetch(
@@ -1681,17 +1686,18 @@ async function apiFetch(
     options = {}
 ){
 
-    const headers = Object.assign(
-        {},
-        options.headers || {},
-        {
-            "Authorization":
-                "Bearer " + token,
+    const headers =
+        Object.assign(
+            {},
+            options.headers || {},
+            {
+                "Authorization":
+                    "Bearer " + token,
 
-            "Accept":
-                "application/json"
-        }
-    );
+                "Accept":
+                    "application/json"
+            }
+        );
 
 
     const response =
@@ -1722,6 +1728,7 @@ async function apiFetch(
 
         let message =
             "API error";
+
 
         try{
 
@@ -2124,6 +2131,7 @@ function renderPartyWise(data){
                 document.createElement(
                     "tr"
                 );
+
 
             const cell =
                 document.createElement(
@@ -2984,30 +2992,19 @@ function printTestReport(){
     win.document.write(
         '<html>' +
         '<head>' +
-        '' +
-
         '<style>' +
-
         css +
-
         '@page{size:A4;margin:0}' +
-
         'body{margin:0;background:#fff}' +
-
         '</style>' +
-
         '</head>' +
-
         '<body>' +
-
         document
         .getElementById(
             "testReportPreview"
         )
         .innerHTML +
-
         '</body>' +
-
         '</html>'
     );
 
@@ -3548,50 +3545,83 @@ else{
     showLogin();
 
 }
-```javascript
-// =========================================================
-// AI CHAT
-// =========================================================
+
+
+/* =========================================================
+   AI CHAT
+========================================================= */
 
 function toggleAIChat(){
 
     const box =
-        document.getElementById("aiChatBox");
+        document.getElementById(
+            "aiChatBox"
+        );
+
 
     if(!box){
         return;
     }
 
-    box.classList.toggle("open");
 
-    if(box.classList.contains("open")){
+    box.classList.toggle(
+        "open"
+    );
 
-        setTimeout(function(){
 
-            const input =
-                document.getElementById("aiChatInput");
+    if(
+        box.classList.contains(
+            "open"
+        )
+    ){
 
-            if(input){
-                input.focus();
-            }
+        setTimeout(
+            function(){
 
-        },100);
+                const input =
+                    document.getElementById(
+                        "aiChatInput"
+                    );
+
+
+                if(input){
+
+                    input.focus();
+
+                }
+
+            },
+            100
+        );
 
     }
+
 }
 
 
-function appendAIMessage(message, type){
+function appendAIMessage(
+    message,
+    type
+){
 
     const messages =
-        document.getElementById("aiChatMessages");
+        document.getElementById(
+            "aiChatMessages"
+        );
+
 
     if(!messages){
+
         return null;
+
     }
 
+
     const div =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
+
 
     div.className =
         "ai-message " +
@@ -3601,46 +3631,78 @@ function appendAIMessage(message, type){
                 : "ai-message-bot"
         );
 
-    div.textContent = message;
 
-    messages.appendChild(div);
+    div.textContent =
+        message;
+
+
+    messages.appendChild(
+        div
+    );
+
 
     messages.scrollTop =
         messages.scrollHeight;
 
+
     return div;
+
 }
 
 
 async function sendAIMessage(){
 
     const input =
-        document.getElementById("aiChatInput");
+        document.getElementById(
+            "aiChatInput"
+        );
+
 
     const sendButton =
-        document.querySelector(".ai-chat-send");
+        document.querySelector(
+            ".ai-chat-send"
+        );
+
 
     if(!input){
+
+        console.error(
+            "AI CHAT: aiChatInput not found"
+        );
+
         return;
+
     }
+
 
     const message =
         input.value.trim();
 
+
     if(!message){
+
         return;
+
     }
+
 
     appendAIMessage(
         message,
         "user"
     );
 
-    input.value = "";
+
+    input.value =
+        "";
+
 
     if(sendButton){
-        sendButton.disabled = true;
+
+        sendButton.disabled =
+            true;
+
     }
+
 
     const loading =
         appendAIMessage(
@@ -3648,28 +3710,19 @@ async function sendAIMessage(){
             "bot"
         );
 
-    try{
 
-        /*
-         * IMPORTANT:
-         *
-         * apiFetch() already:
-         * 1. adds Authorization token
-         * 2. checks errors
-         * 3. converts response to JSON
-         *
-         * Therefore yahan response.json()
-         * nahi karna hai.
-         */
+    try{
 
         const data =
             await apiFetch(
-                API_URL + "/ai-chat",
+                API_URL +
+                "/ai-chat",
                 {
                     method:"POST",
 
                     headers:{
-                        "Content-Type":"application/json"
+                        "Content-Type":
+                            "application/json"
                     },
 
                     body:JSON.stringify({
@@ -3680,7 +3733,9 @@ async function sendAIMessage(){
 
 
         if(loading){
+
             loading.remove();
+
         }
 
 
@@ -3690,44 +3745,64 @@ async function sendAIMessage(){
             "bot"
         );
 
+    }
+    catch(error){
 
-    }catch(error){
+        console.error(
+            "AI CHAT ERROR:",
+            error
+        );
+
 
         if(loading){
+
             loading.remove();
+
         }
 
 
         appendAIMessage(
             "AI error: " +
-            error.message,
+            (
+                error.message ||
+                "Unknown error"
+            ),
             "bot"
         );
 
-
-    }finally{
+    }
+    finally{
 
         if(sendButton){
-            sendButton.disabled = false;
+
+            sendButton.disabled =
+                false;
+
         }
+
 
         input.focus();
 
     }
+
 }
 
 
-// =========================================================
-// ENTER KEY = SEND
-// SHIFT + ENTER = NEW LINE
-// =========================================================
+/* =========================================================
+   AI CHAT ENTER KEY
+   ENTER = SEND
+   SHIFT + ENTER = NEW LINE
+========================================================= */
 
 document.addEventListener(
     "keydown",
     function(event){
 
         const input =
-            document.getElementById("aiChatInput");
+            document.getElementById(
+                "aiChatInput"
+            );
+
 
         if(
             input &&
@@ -3744,9 +3819,6 @@ document.addEventListener(
 
     }
 );
-```
-
-
 
 </script>
 </body>
