@@ -3553,6 +3553,34 @@ else{
 // AI CHAT
 // =========================================================
 
+function toggleAIChat(){
+
+    const box =
+        document.getElementById("aiChatBox");
+
+    if(!box){
+        return;
+    }
+
+    box.classList.toggle("open");
+
+    if(box.classList.contains("open")){
+
+        setTimeout(function(){
+
+            const input =
+                document.getElementById("aiChatInput");
+
+            if(input){
+                input.focus();
+            }
+
+        },100);
+
+    }
+}
+
+
 function appendAIMessage(message, type){
 
     const messages =
@@ -3567,9 +3595,11 @@ function appendAIMessage(message, type){
 
     div.className =
         "ai-message " +
-        (type === "user"
-            ? "ai-message-user"
-            : "ai-message-bot");
+        (
+            type === "user"
+                ? "ai-message-user"
+                : "ai-message-bot"
+        );
 
     div.textContent = message;
 
@@ -3601,7 +3631,6 @@ async function sendAIMessage(){
         return;
     }
 
-    // User message
     appendAIMessage(
         message,
         "user"
@@ -3613,7 +3642,6 @@ async function sendAIMessage(){
         sendButton.disabled = true;
     }
 
-    // Loading message
     const loading =
         appendAIMessage(
             "Rahul AI is thinking...",
@@ -3622,16 +3650,26 @@ async function sendAIMessage(){
 
     try{
 
-        const response =
-            await fetch(
+        /*
+         * IMPORTANT:
+         *
+         * apiFetch() already:
+         * 1. adds Authorization token
+         * 2. checks errors
+         * 3. converts response to JSON
+         *
+         * Therefore yahan response.json()
+         * nahi karna hai.
+         */
+
+        const data =
+            await apiFetch(
                 API_URL + "/ai-chat",
                 {
                     method:"POST",
 
                     headers:{
-                        "Content-Type":"application/json",
-                        "Authorization":"Bearer " + token,
-                        "Accept":"application/json"
+                        "Content-Type":"application/json"
                     },
 
                     body:JSON.stringify({
@@ -3640,50 +3678,18 @@ async function sendAIMessage(){
                 }
             );
 
-        let data = null;
-
-        try{
-
-            data =
-                await response.json();
-
-        }catch(jsonError){
-
-            data = null;
-        }
 
         if(loading){
             loading.remove();
         }
 
-        // Login/token problem
-        if(response.status === 401){
 
-            appendAIMessage(
-                "Session expire ho gaya. Please login again.",
-                "bot"
-            );
-
-            return;
-        }
-
-        // Backend error
-        if(!response.ok){
-
-            throw new Error(
-                data && data.detail
-                    ? data.detail
-                    : "AI request failed. HTTP " + response.status
-            );
-        }
-
-        // Successful response
         appendAIMessage(
-            data && data.answer
-                ? data.answer
-                : "AI ne koi response nahi diya.",
+            data.answer ||
+            "AI ne koi response nahi diya.",
             "bot"
         );
+
 
     }catch(error){
 
@@ -3691,11 +3697,13 @@ async function sendAIMessage(){
             loading.remove();
         }
 
+
         appendAIMessage(
             "AI error: " +
             error.message,
             "bot"
         );
+
 
     }finally{
 
@@ -3704,12 +3712,15 @@ async function sendAIMessage(){
         }
 
         input.focus();
+
     }
 }
 
 
-// Enter = Send
-// Shift + Enter = New line
+// =========================================================
+// ENTER KEY = SEND
+// SHIFT + ENTER = NEW LINE
+// =========================================================
 
 document.addEventListener(
     "keydown",
@@ -3728,11 +3739,13 @@ document.addEventListener(
             event.preventDefault();
 
             sendAIMessage();
+
         }
 
     }
 );
 ```
+
 
 
 </script>
