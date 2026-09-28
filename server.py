@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from datetime import datetime, date, timezone, timedelta
+from datetime import datetime, date
 import os
 import hmac
 import hashlib
@@ -11,7 +11,7 @@ import json
 import requests
 import calendar
 import random
-
+from openai import OpenAI
 
 # ========================================================= # APP
 # ========================================================= 
@@ -59,19 +59,16 @@ SUPABASE_URL = os.getenv(
 SUPABASE_KEY = os.getenv(
     "SUPABASE_KEY"
 )
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+if OPENAI_API_KEY:
+    openai_client = OpenAI(
+        api_key=OPENAI_API_KEY
+    )
+else:
+    openai_client = None
 
 TABLE = "excel_rows"
-
-# India timezone — all dashboard, daily dispatch and monthly report
-# date calculations use IST instead of the Render server timezone.
-IST = timezone(timedelta(hours=5, minutes=30))
-
-def india_now():
-    return datetime.now(IST)
-
-def india_today():
-    return india_now().date()
 
 
 # ========================================================= # MONTHLY MATERIALS
@@ -261,49 +258,59 @@ def clean_number(value):
 
 
 def date_only(value):
+
     if value is None:
         return None
 
-    if isinstance(value, datetime):
+    if isinstance(
+        value,
+        datetime
+    ):
         return value.date()
 
-    if isinstance(value, date):
+    if isinstance(
+        value,
+        date
+    ):
         return value
 
-    value = str(value).strip()
+    value = str(
+        value
+    ).strip()
 
-    if not value:
-        return None
-
-    # ISO datetime from Supabase
-    # Example:
-    # 2026-08-01T00:00:00
-    # 2026-08-01T00:00:00+00:00
-    try:
-        return datetime.fromisoformat(
-            value.replace("Z", "+00:00")
-        ).date()
-    except Exception:
-        pass
 
     formats = (
+
         "%Y-%m-%d",
+
         "%d-%m-%Y",
+
         "%d/%m/%Y",
+
         "%m/%d/%Y",
+
         "%d.%m.%Y",
+
     )
 
+
     for fmt in formats:
+
         try:
+
             return datetime.strptime(
                 value,
                 fmt
             ).date()
+
         except Exception:
+
             pass
 
+
     return None
+
+
 def first_existing(
     record,
     names
@@ -1143,7 +1150,7 @@ def dashboard(
         rows = get_all_rows()
 
 
-        today = india_today()
+        today = datetime.now().date()
 
 
         orders = []
@@ -2196,7 +2203,7 @@ def current_month_daily_pcs_dispatch(
         bool = Depends(require_auth)
 ):
 
-    today = india_today()
+    today = datetime.now().date()
 
 
     return daily_pcs_dispatch(
@@ -3789,4 +3796,124 @@ def generate_test_report(
         raise HTTPException(
             status_code=500,
             detail=str(e)
+        )
+
+# =========================================================
+# AI CHAT
+# =========================================================
+
+@app.post("/ai-chat")
+def ai_chat(
+    data: dict,
+    authenticated: bool = Depends(require_auth)
+):
+    try:
+
+        if openai_client is None:
+            raise HTTPException(
+                status_code=500,
+                detail="OPENAI_API_KEY is not configured"
+            )
+
+        message = text(
+            data.get("message")
+        )
+
+        if not message:
+            raise HTTPException(
+                status_code=400,
+                detail="Message is required"
+            )
+
+        if len(message) > 10000:
+            raise HTTPException(
+                status_code=400,
+                detail="Message is too long"
+            )
+
+        instructions = """
+You are Rahul AI Assistant inside Rahul Software.
+
+Rahul Software is a business operations system.
+
+The business works with:
+
+- Orders
+- Dispatch
+- Kraft paper
+- Paper products
+- Slipsheets
+- Gripsheets
+- PET gripsheets
+- Packaging
+- GSM
+- TC
+- Thickness
+- Caliper
+- ECT
+- Weight calculations
+- Roll calculations
+- Monthly reports
+- Test reports
+- Business operations
+
+Answer the user's questions clearly and practically.
+
+Use simple Indian business English/Hinglish when appropriate.
+
+If the user asks for a calculation:
+
+- show the formula
+- show the calculation
+- show the final answer
+
+If the user asks a technical paper/packaging question:
+
+- explain it simply
+- give a practical example when useful
+
+IMPORTANT:
+
+Do not invent Rahul Software's business data.
+
+You do NOT automatically have access to Supabase data
+just because you are inside Rahul Software.
+
+If the user asks about specific company data, orders,
+parties, dispatch quantities, stock, invoices, or reports
+and that data has not been provided to you in the request,
+clearly say that the required data is not currently
+available to the AI.
+
+Do not claim that you changed, deleted, created, or updated
+any business data.
+
+Keep answers concise unless the user asks for detailed
+explanation.
+"""
+
+        response = openai_client.responses.create(
+            model="gpt-5.6-luna",
+            instructions=instructions,
+            input=message
+        )
+
+        answer = response.output_text
+
+        if not answer:
+            answer = "AI ne koi response generate nahi kiya."
+
+        return {
+            "status": "success",
+            "answer": answer
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail="AI error: " + str(e)
         )
