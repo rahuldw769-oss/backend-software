@@ -11,7 +11,7 @@ import json
 import requests
 import calendar
 import random
-from openai import OpenAI
+
 
 # ========================================================= # APP
 # ========================================================= 
@@ -59,15 +59,14 @@ SUPABASE_URL = os.getenv(
 SUPABASE_KEY = os.getenv(
     "SUPABASE_KEY"
 )
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-if OPENAI_API_KEY:
-    openai_client = OpenAI(
-        api_key=OPENAI_API_KEY
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if GEMINI_API_KEY:
+    gemini_client = genai.Client(
+        api_key=GEMINI_API_KEY
     )
 else:
-    openai_client = None
-
+    gemini_client = None
+    
 TABLE = "excel_rows"
 
 
@@ -3799,7 +3798,7 @@ def generate_test_report(
         )
 
 # =========================================================
-# AI CHAT
+# AI CHAT - GEMINI
 # =========================================================
 
 @app.post("/ai-chat")
@@ -3809,10 +3808,10 @@ def ai_chat(
 ):
     try:
 
-        if openai_client is None:
+        if gemini_client is None:
             raise HTTPException(
                 status_code=500,
-                detail="OPENAI_API_KEY is not configured"
+                detail="GEMINI_API_KEY is not configured"
             )
 
         message = text(
@@ -3892,13 +3891,14 @@ Keep answers concise unless the user asks for detailed
 explanation.
 """
 
-        response = openai_client.responses.create(
-            model="gpt-5.6-luna",
-            instructions=instructions,
-            input=message
+        prompt = instructions + "\n\nUSER QUESTION:\n" + message
+
+        response = gemini_client.models.generate_content(
+            model="gemini-3.8-flash",
+            contents=prompt
         )
 
-        answer = response.output_text
+        answer = response.text
 
         if not answer:
             answer = "AI ne koi response generate nahi kiya."
