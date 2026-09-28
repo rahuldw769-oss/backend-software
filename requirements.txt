@@ -4,4 +4,3 @@ openpyxl
 requests
 PyJWT
 python-multipart
-google-genai
