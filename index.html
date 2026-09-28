@@ -277,7 +277,7 @@ body{
 
 .stats-grid{
     display:grid;
-    grid-template-columns:repeat(4,1fr);
+    grid-template-columns:repeat(5,1fr);
     gap:10px;
     margin-bottom:16px;
 }
@@ -887,9 +887,164 @@ button:active{transform:scale(.985)}
 @media(max-width:760px){
   .login-wrapper{grid-template-columns:1fr;gap:28px;max-width:470px}.login-left{text-align:center}.login-left:before{margin-bottom:13px}.login-left:after{margin-top:17px}.login-card{margin:auto;padding:25px}
   .app-sidebar{left:10px;right:10px;bottom:10px;top:auto;width:auto;height:70px;padding:8px 10px;border-radius:20px;flex-direction:row;box-shadow:0 16px 40px rgba(16,24,40,.22);background:rgba(15,29,59,.96);backdrop-filter:blur(16px)}
-  .sidebar-brand,.sidebar-foot,.nav-label{display:none}.sidebar-nav{width:100%;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}.header-button{height:54px;justify-content:center;flex-direction:column;gap:3px;padding:5px;border-radius:14px;font-size:9px}.header-button.active{box-shadow:none}.nav-icon{font-size:18px}.nav-text{flex:none}.app-main{margin-left:0;padding-bottom:82px}.app-topbar{height:62px;padding:0 17px}.mobile-brand{display:flex}.topbar-caption{display:none}.app-content{padding:17px 14px 28px}.stats-grid{grid-template-columns:1fr 1fr;gap:10px}.stat-card{padding:15px}.stat-value{font-size:24px}.dashboard-columns{grid-template-columns:1fr}.dashboard-title-card{padding:21px}.dashboard-title-row{align-items:flex-start}.dashboard-refresh{padding:9px}.tr-grid{grid-template-columns:1fr}.tr-full{grid-column:auto}.test-report-preview{padding:10px;overflow:auto}
+  .sidebar-brand,.sidebar-foot,.nav-label{display:none}.sidebar-nav{width:100%;display:grid;grid-template-columns:repeat(5,1fr);gap:4px}.header-button{height:54px;justify-content:center;flex-direction:column;gap:3px;padding:5px;border-radius:14px;font-size:9px}.header-button.active{box-shadow:none}.nav-icon{font-size:18px}.nav-text{flex:none}.app-main{margin-left:0;padding-bottom:82px}.app-topbar{height:62px;padding:0 17px}.mobile-brand{display:flex}.topbar-caption{display:none}.app-content{padding:17px 14px 28px}.stats-grid{grid-template-columns:1fr 1fr;gap:10px}.stat-card{padding:15px}.stat-value{font-size:24px}.dashboard-columns{grid-template-columns:1fr}.dashboard-title-card{padding:21px}.dashboard-title-row{align-items:flex-start}.dashboard-refresh{padding:9px}.tr-grid{grid-template-columns:1fr}.tr-full{grid-column:auto}.test-report-preview{padding:10px;overflow:auto}
 }
 @media(max-width:430px){.stats-grid{grid-template-columns:1fr}.login-page{padding:16px}.login-wrapper{min-height:calc(100vh - 32px)}.logo{font-size:43px}.tagline{font-size:18px}.login-card{border-radius:20px}.dashboard-title{font-size:21px}}
+/* =========================================================
+   AI CHAT
+   ========================================================= */
+
+.ai-chat-box{
+  position:fixed;
+  right:24px;
+  bottom:24px;
+  width:380px;
+  height:560px;
+  background:#ffffff;
+  border:1px solid #d9dee7;
+  border-radius:16px;
+  box-shadow:0 20px 50px rgba(0,0,0,.20);
+  display:none;
+  flex-direction:column;
+  overflow:hidden;
+  z-index:9999;
+}
+
+.ai-chat-box.open{
+  display:flex;
+}
+
+.ai-chat-header{
+  min-height:68px;
+  padding:14px 16px;
+  background:#111827;
+  color:#ffffff;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.ai-chat-title{
+  font-size:17px;
+  font-weight:700;
+}
+
+.ai-chat-subtitle{
+  margin-top:3px;
+  font-size:12px;
+  opacity:.7;
+}
+
+.ai-chat-close{
+  width:34px;
+  height:34px;
+  border:0;
+  border-radius:8px;
+  background:rgba(255,255,255,.10);
+  color:#ffffff;
+  font-size:24px;
+  line-height:1;
+  cursor:pointer;
+}
+
+.ai-chat-close:hover{
+  background:rgba(255,255,255,.18);
+}
+
+.ai-chat-messages{
+  flex:1;
+  padding:16px;
+  overflow-y:auto;
+  background:#f5f7fa;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.ai-message{
+  max-width:85%;
+  padding:10px 13px;
+  border-radius:12px;
+  font-size:14px;
+  line-height:1.5;
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+
+.ai-message-bot{
+  align-self:flex-start;
+  background:#ffffff;
+  border:1px solid #e1e5eb;
+  color:#1f2937;
+}
+
+.ai-message-user{
+  align-self:flex-end;
+  background:#111827;
+  color:#ffffff;
+}
+
+.ai-message-loading{
+  align-self:flex-start;
+  background:#ffffff;
+  border:1px solid #e1e5eb;
+  color:#6b7280;
+  font-style:italic;
+}
+
+.ai-chat-input-area{
+  display:flex;
+  gap:8px;
+  padding:12px;
+  background:#ffffff;
+  border-top:1px solid #e1e5eb;
+}
+
+.ai-chat-input{
+  flex:1;
+  min-width:0;
+  resize:none;
+  max-height:100px;
+  padding:10px 12px;
+  border:1px solid #d1d5db;
+  border-radius:10px;
+  outline:none;
+  font-family:inherit;
+  font-size:14px;
+}
+
+.ai-chat-input:focus{
+  border-color:#6b7280;
+}
+
+.ai-chat-send{
+  align-self:flex-end;
+  height:40px;
+  padding:0 16px;
+  border:0;
+  border-radius:10px;
+  background:#111827;
+  color:#ffffff;
+  cursor:pointer;
+  font-weight:600;
+}
+
+.ai-chat-send:disabled{
+  opacity:.5;
+  cursor:not-allowed;
+}
+
+@media (max-width:700px){
+
+  .ai-chat-box{
+    right:10px;
+    left:10px;
+    bottom:10px;
+    width:auto;
+    height:70vh;
+  }
+
+}
 </style>
 </head>
 <body><div class="login-page" id="loginBox">
@@ -1127,6 +1282,10 @@ button:active{transform:scale(.985)}
 <button class="app-button" onclick="loadMonthlyReport()">
                         LOAD REPORT
                     </button>
+<button class="header-button" id="aiChatButton" onclick="toggleAIChat()">
+  <span class="nav-icon">✦</span>
+  <span class="nav-text">AI Chat</span>
+</button>
 </div>
 <div class="status" id="monthlyStatus"></div>
 </div>
@@ -1278,7 +1437,59 @@ button:active{transform:scale(.985)}
 <div class="status" id="status"></div>
 </div>
 <div id="results"></div>
-</div></div></main></div><script>
+</div></div></main></div>
+<!-- =========================================================
+     AI CHAT
+     ========================================================= -->
+
+<div id="aiChatBox" class="ai-chat-box">
+
+  <div class="ai-chat-header">
+    <div>
+      <div class="ai-chat-title">Rahul AI</div>
+      <div class="ai-chat-subtitle">AI Assistant</div>
+    </div>
+
+    <button
+      type="button"
+      class="ai-chat-close"
+      onclick="toggleAIChat()"
+      title="Close"
+    >
+      ×
+    </button>
+  </div>
+
+  <div id="aiChatMessages" class="ai-chat-messages">
+
+    <div class="ai-message ai-message-bot">
+      Hello! Main Rahul AI hoon. Aap mujhse paper, packaging,
+      GSM, TC, calculations ya general business questions pooch sakte ho.
+    </div>
+
+  </div>
+
+  <div class="ai-chat-input-area">
+
+    <textarea
+      id="aiChatInput"
+      class="ai-chat-input"
+      placeholder="Type your question..."
+      rows="1"
+    ></textarea>
+
+    <button
+      type="button"
+      class="ai-chat-send"
+      onclick="sendAIMessage()"
+    >
+      Send
+    </button>
+
+  </div>
+
+</div>
+<script>
 
 const API_URL =
     "https://backend-software-e1jw.onrender.com";
@@ -3338,5 +3549,187 @@ else{
 
 }
 
-</script></body>
+// =========================================================
+// AI CHAT
+// =========================================================
+
+function toggleAIChat(){
+
+    const box = document.getElementById("aiChatBox");
+
+    if(!box){
+        return;
+    }
+
+    box.classList.toggle("open");
+
+    if(box.classList.contains("open")){
+
+        setTimeout(function(){
+
+            const input =
+                document.getElementById("aiChatInput");
+
+            if(input){
+                input.focus();
+            }
+
+        },100);
+
+    }
+}
+
+
+function appendAIMessage(message, type){
+
+    const messages =
+        document.getElementById("aiChatMessages");
+
+    if(!messages){
+        return null;
+    }
+
+    const div =
+        document.createElement("div");
+
+    div.className =
+        "ai-message " +
+        (type === "user"
+            ? "ai-message-user"
+            : "ai-message-bot");
+
+    // IMPORTANT:
+    // textContent is used so AI response cannot inject HTML/JS.
+    div.textContent = message;
+
+    messages.appendChild(div);
+
+    messages.scrollTop =
+        messages.scrollHeight;
+
+    return div;
+}
+
+
+async function sendAIMessage(){
+
+    const input =
+        document.getElementById("aiChatInput");
+
+    const sendButton =
+        document.querySelector(".ai-chat-send");
+
+    if(!input){
+        return;
+    }
+
+    const message =
+        input.value.trim();
+
+    if(!message){
+        return;
+    }
+
+    appendAIMessage(
+        message,
+        "user"
+    );
+
+    input.value = "";
+
+    if(sendButton){
+        sendButton.disabled = true;
+    }
+
+    const loading =
+        appendAIMessage(
+            "Rahul AI is thinking...",
+            "bot"
+        );
+
+    try{
+
+        const response =
+            await apiFetch(
+                API_URL + "/ai-chat",
+                {
+                    method:"POST",
+
+                    headers:{
+                        "Content-Type":"application/json"
+                    },
+
+                    body:JSON.stringify({
+                        message:message
+                    })
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if(loading){
+            loading.remove();
+        }
+
+        if(!response.ok){
+
+            throw new Error(
+                data.detail ||
+                "AI request failed"
+            );
+        }
+
+        appendAIMessage(
+            data.answer ||
+            "AI ne koi response nahi diya.",
+            "bot"
+        );
+
+    }catch(error){
+
+        if(loading){
+            loading.remove();
+        }
+
+        appendAIMessage(
+            "AI error: " +
+            error.message,
+            "bot"
+        );
+
+    }finally{
+
+        if(sendButton){
+            sendButton.disabled = false;
+        }
+
+        input.focus();
+    }
+}
+
+
+document.addEventListener(
+    "keydown",
+    function(event){
+
+        const input =
+            document.getElementById("aiChatInput");
+
+        if(
+            input &&
+            document.activeElement === input &&
+            event.key === "Enter" &&
+            !event.shiftKey
+        ){
+
+            event.preventDefault();
+
+            sendAIMessage();
+        }
+
+    }
+);
+</script>
+</body>
 </html>
