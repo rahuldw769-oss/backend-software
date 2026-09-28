@@ -3548,39 +3548,11 @@ else{
     showLogin();
 
 }
-
+```javascript
 // =========================================================
 // AI CHAT
 // =========================================================
 
-function toggleAIChat(){
-
-    const box = document.getElementById("aiChatBox");
-
-    if(!box){
-        return;
-    }
-
-    box.classList.toggle("open");
-
-    if(box.classList.contains("open")){
-
-        setTimeout(function(){
-
-            const input =
-                document.getElementById("aiChatInput");
-
-            if(input){
-                input.focus();
-            }
-
-        },100);
-
-    }
-}
-
-
-```javascript
 function appendAIMessage(message, type){
 
     const messages =
@@ -3599,7 +3571,6 @@ function appendAIMessage(message, type){
             ? "ai-message-user"
             : "ai-message-bot");
 
-    // AI response ko safely plain text ke roop me show karega
     div.textContent = message;
 
     messages.appendChild(div);
@@ -3630,6 +3601,7 @@ async function sendAIMessage(){
         return;
     }
 
+    // User message
     appendAIMessage(
         message,
         "user"
@@ -3641,6 +3613,7 @@ async function sendAIMessage(){
         sendButton.disabled = true;
     }
 
+    // Loading message
     const loading =
         appendAIMessage(
             "Rahul AI is thinking...",
@@ -3649,14 +3622,16 @@ async function sendAIMessage(){
 
     try{
 
-        const data =
-            await apiFetch(
+        const response =
+            await fetch(
                 API_URL + "/ai-chat",
                 {
                     method:"POST",
 
                     headers:{
-                        "Content-Type":"application/json"
+                        "Content-Type":"application/json",
+                        "Authorization":"Bearer " + token,
+                        "Accept":"application/json"
                     },
 
                     body:JSON.stringify({
@@ -3665,27 +3640,48 @@ async function sendAIMessage(){
                 }
             );
 
+        let data = null;
+
+        try{
+
+            data =
+                await response.json();
+
+        }catch(jsonError){
+
+            data = null;
+        }
+
         if(loading){
             loading.remove();
         }
 
-        if(!data){
+        // Login/token problem
+        if(response.status === 401){
+
+            appendAIMessage(
+                "Session expire ho gaya. Please login again.",
+                "bot"
+            );
+
+            return;
+        }
+
+        // Backend error
+        if(!response.ok){
 
             throw new Error(
-                "AI ne empty response diya."
+                data && data.detail
+                    ? data.detail
+                    : "AI request failed. HTTP " + response.status
             );
         }
 
-        if(data.detail){
-
-            throw new Error(
-                data.detail
-            );
-        }
-
+        // Successful response
         appendAIMessage(
-            data.answer ||
-            "AI ne koi response nahi diya.",
+            data && data.answer
+                ? data.answer
+                : "AI ne koi response nahi diya.",
             "bot"
         );
 
@@ -3712,6 +3708,9 @@ async function sendAIMessage(){
 }
 
 
+// Enter = Send
+// Shift + Enter = New line
+
 document.addEventListener(
     "keydown",
     function(event){
@@ -3734,6 +3733,7 @@ document.addEventListener(
     }
 );
 ```
+
 
 </script>
 </body>
