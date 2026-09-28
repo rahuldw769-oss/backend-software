@@ -1,10 +1,10 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mekab Software</title>
-
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Rahul Software | Operations Console</title>
 <style>
 
 *{
@@ -558,121 +558,6 @@ select{
 }
 
 /* =========================
-   TEST REPORT
-========================= */
-
-.test-report-page{
-    display:none;
-}
-
-.test-report-controls{
-    background:#fff;
-    padding:16px;
-    border-radius:8px;
-    box-shadow:0 1px 3px rgba(0,0,0,.15);
-    margin-bottom:16px;
-}
-
-.tr-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:10px;
-}
-
-.tr-grid label{
-    display:block;
-    font-size:12px;
-    font-weight:bold;
-    margin-bottom:4px;
-}
-
-.tr-grid input,
-.tr-grid select{
-    margin-top:0;
-}
-
-/* =========================
-   TEST REPORT
-========================= */
-
-.test-report-page{
-    display:none;
-}
-
-.test-report-controls{
-    background:#fff;
-    padding:16px;
-    border-radius:8px;
-    box-shadow:0 1px 3px rgba(0,0,0,.15);
-    margin-bottom:16px;
-}
-
-.tr-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:10px;
-}
-
-.tr-grid label{
-    display:block;
-    font-size:12px;
-    font-weight:bold;
-    margin-bottom:4px;
-}
-
-.tr-grid input,
-.tr-grid select{
-    margin-top:0;
-}
-
-.tr-full{
-    grid-column:1/-1;
-}
-
-.tr-address{
-    min-height:46px;
-    padding:10px;
-    border:1px solid #ccd0d5;
-    border-radius:6px;
-    background:#f7f7f7;
-    font-size:14px;
-    white-space:pre-wrap;
-}
-
-.tr-actions{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:10px;
-}
-
-.tr-actions button{
-    margin-top:12px;
-}
-
-.test-report-preview{
-    background:#fff;
-    padding:24px;
-    border-radius:8px;
-    box-shadow:0 1px 3px rgba(0,0,0,.15);
-}
-
-/* =========================
-   TEST REPORT PAPER
-========================= */
-
-.tr-paper{
-    width:210mm;
-    min-height:297mm;
-    margin:auto;
-    background:#fff;
-    color:#111;
-    font-family:Arial,Helvetica,sans-serif;
-    font-size:10.5px;
-    padding:9mm 11mm 7mm;
-    box-sizing:border-box;
-}
-
-/* =========================
    COMPANY HEADER
 ========================= */
 
@@ -863,941 +748,539 @@ select{
    PRINT
 ========================= */
 
-@media print{
 
-    body>*{
-        display:none !important;
-    }
 
-    .tr-print-root{
-        display:block !important;
-    }
 
-    .tr-paper{
-        margin:0;
-        width:210mm;
-        min-height:297mm;
-        box-shadow:none;
-    }
-
-    .test-report-preview{
-        display:block !important;
-        padding:0;
-        box-shadow:none;
-    }
+/* =========================================================
+   RAHUL SOFTWARE — HIGH LEVEL UI SYSTEM
+   Functional markup/JS preserved; visual shell redesigned.
+========================================================= */
+:root{
+  --bg:#f4f7fb;
+  --surface:#ffffff;
+  --surface-2:#f8fafc;
+  --ink:#101828;
+  --muted:#667085;
+  --line:#e4eaf2;
+  --brand:#2457d6;
+  --brand-2:#4f7cff;
+  --brand-soft:#edf3ff;
+  --success:#12b76a;
+  --danger:#e5484d;
+  --shadow:0 12px 32px rgba(16,24,40,.07);
+  --shadow-sm:0 5px 16px rgba(16,24,40,.06);
+  --radius:18px;
 }
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+}
+button,input,select{font-family:inherit}
+.hidden{display:none!important}
+
+/* LOGIN — completely refreshed */
+.login-page{
+  min-height:100vh;
+  padding:24px;
+  position:relative;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 10% 10%,rgba(79,124,255,.20),transparent 32%),
+    radial-gradient(circle at 90% 90%,rgba(18,183,106,.13),transparent 28%),
+    linear-gradient(135deg,#f8fbff 0%,#eef3fb 100%);
+}
+.login-page:before,.login-page:after{
+  content:"";position:absolute;border-radius:50%;pointer-events:none;
+  filter:blur(2px);opacity:.55;animation:floatOrb 8s ease-in-out infinite;
+}
+.login-page:before{width:260px;height:260px;background:rgba(36,87,214,.10);right:-90px;top:-80px}
+.login-page:after{width:210px;height:210px;background:rgba(18,183,106,.08);left:-80px;bottom:-70px;animation-delay:-3s}
+.login-wrapper{
+  position:relative;z-index:1;max-width:1120px;min-height:calc(100vh - 48px);margin:auto;
+  display:grid;grid-template-columns:1.08fr .92fr;align-items:center;gap:80px;
+}
+.login-left{max-width:560px;animation:fadeUp .65s ease both}
+.login-left:before{content:"BUSINESS OPERATIONS PLATFORM";display:inline-flex;align-items:center;padding:7px 11px;border-radius:999px;background:rgba(36,87,214,.08);color:var(--brand);font-size:11px;font-weight:800;letter-spacing:.12em;margin-bottom:18px}
+.logo{color:var(--ink);font-size:clamp(42px,5vw,68px);font-weight:850;letter-spacing:-.055em;margin:0 0 12px}
+.logo:after{content:".";color:var(--brand)}
+.tagline{font-size:clamp(19px,2.3vw,27px);line-height:1.35;color:#475467;max-width:500px}
+.login-left:after{content:"Orders  •  Dispatch  •  Reports  •  Test Certificates";display:block;margin-top:28px;color:#98a2b3;font-size:13px;font-weight:600}
+.login-card{
+  width:100%;max-width:430px;margin-left:auto;padding:34px;border:1px solid rgba(255,255,255,.9);
+  border-radius:24px;background:rgba(255,255,255,.88);backdrop-filter:blur(18px);box-shadow:0 28px 70px rgba(16,24,40,.14);
+  animation:fadeUp .65s .1s ease both;
+}
+.login-card:before{content:"SIGN IN";display:block;font-size:12px;font-weight:800;letter-spacing:.12em;color:var(--brand);margin-bottom:22px}
+.login-card input{
+  width:100%;height:54px;margin-bottom:13px;padding:0 16px;border:1px solid #d8e0eb;border-radius:12px;background:#f9fbfd;font-size:15px;outline:none;transition:.2s;
+}
+.login-card input:focus{background:#fff;border-color:#7394ed;box-shadow:0 0 0 4px rgba(36,87,214,.10);transform:translateY(-1px)}
+.login-button{height:54px;border-radius:12px;background:linear-gradient(135deg,var(--brand),#3c6be6);box-shadow:0 9px 20px rgba(36,87,214,.22);transition:.2s}
+.login-button:hover{background:linear-gradient(135deg,#1e4ec5,#345fd2);transform:translateY(-2px);box-shadow:0 13px 25px rgba(36,87,214,.25)}
+.login-status{min-height:20px}.login-divider{margin:23px 0;border-color:var(--line)}.software-name{font-size:12px;color:#98a2b3}
+
+/* APP SHELL */
+.app-page{min-height:100vh;background:var(--bg)}
+.app-sidebar{
+  position:fixed;z-index:30;left:0;top:0;bottom:0;width:252px;padding:24px 14px 16px;
+  background:linear-gradient(180deg,#0f1d3b 0%,#132754 100%);color:#fff;display:flex;flex-direction:column;
+  box-shadow:10px 0 35px rgba(16,24,40,.10)
+}
+.sidebar-brand{display:flex;align-items:center;gap:11px;padding:4px 9px 28px}
+.brand-mark,.mobile-mark{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#5b82ff,#2457d6);font-weight:900;font-size:19px;box-shadow:0 8px 20px rgba(79,124,255,.28)}
+.brand-name{font-weight:800;font-size:16px;letter-spacing:-.02em}.brand-sub{font-size:10px;color:#aab9d8;margin-top:2px;letter-spacing:.05em;text-transform:uppercase}
+.nav-label{font-size:10px;font-weight:800;letter-spacing:.12em;color:#7185ae;padding:0 12px 9px}
+.sidebar-nav{display:flex;flex-direction:column;gap:6px}
+.header-button{
+  width:100%;border:0;border-radius:12px;padding:12px 13px;display:flex;align-items:center;gap:12px;background:transparent;color:#b9c6df;text-align:left;font-size:12px;font-weight:750;transition:.22s;cursor:pointer;position:relative
+}
+.header-button:hover{background:rgba(255,255,255,.07);color:#fff;transform:translateX(2px)}
+.header-button.active{background:linear-gradient(90deg,rgba(79,124,255,.27),rgba(79,124,255,.10));color:#fff;box-shadow:inset 3px 0 0 #6e8eff}
+.nav-icon{width:22px;text-align:center;font-size:18px;line-height:1;color:inherit}.nav-text{flex:1}
+.sidebar-foot{margin-top:auto;padding:13px 12px;border:1px solid rgba(255,255,255,.07);border-radius:12px;color:#91a3c6;font-size:10px;display:flex;align-items:center;gap:8px}
+.sidebar-status-dot{width:7px;height:7px;border-radius:50%;background:#20d486;box-shadow:0 0 0 4px rgba(32,212,134,.10);animation:pulse 2s infinite}
+.app-main{margin-left:252px;min-height:100vh}.app-topbar{height:72px;position:sticky;top:0;z-index:20;background:rgba(244,247,251,.84);backdrop-filter:blur(15px);border-bottom:1px solid rgba(228,234,242,.8);display:flex;align-items:center;justify-content:space-between;padding:0 30px}
+.mobile-brand{display:none;align-items:center;gap:9px;font-size:15px;font-weight:800}.mobile-mark{width:34px;height:34px;font-size:16px}.topbar-right{display:flex;align-items:center;gap:14px}.live-chip{display:flex;align-items:center;gap:6px;border:1px solid #d9e8df;background:#f3fbf7;color:#137a4b;padding:7px 10px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.04em}.live-dot{width:6px;height:6px;border-radius:50%;background:#12b76a;animation:pulse 1.8s infinite}.topbar-caption{font-size:11px;color:#98a2b3}
+.app-content{max-width:1500px;margin:0 auto;padding:28px 30px 44px}
+
+/* DASHBOARD STRUCTURE */
+.dashboard-page{display:none;animation:pageIn .42s ease both}
+.dashboard-title-card{position:relative;overflow:hidden;background:linear-gradient(135deg,#172a56 0%,#2457d6 62%,#4f7cff 100%);color:#fff;border:0;border-radius:22px;padding:27px 28px;margin-bottom:20px;box-shadow:0 18px 40px rgba(36,87,214,.18)}
+.dashboard-title-card:after{content:"";position:absolute;width:240px;height:240px;border:1px solid rgba(255,255,255,.11);border-radius:50%;right:-65px;top:-95px;box-shadow:0 0 0 35px rgba(255,255,255,.025),0 0 0 70px rgba(255,255,255,.018)}
+.dashboard-title-row{position:relative;z-index:1}.dashboard-title{font-size:25px;letter-spacing:-.035em}.dashboard-date{color:#dce6ff;margin-top:7px}.dashboard-refresh{border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.12);backdrop-filter:blur(10px);border-radius:10px;padding:10px 14px;transition:.2s}.dashboard-refresh:hover{background:rgba(255,255,255,.2);transform:translateY(-1px)}
+.stats-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:20px}
+.stat-card{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:17px;padding:19px;background:var(--surface);box-shadow:var(--shadow-sm);transition:.22s;animation:cardIn .5s ease both}.stat-card:hover{transform:translateY(-4px);box-shadow:var(--shadow)}.stat-card:after{content:"";position:absolute;width:75px;height:75px;border-radius:50%;background:var(--brand-soft);right:-24px;top:-24px}.stat-label{font-size:11px;text-transform:uppercase;letter-spacing:.055em;font-weight:800;color:#7a8699}.stat-value{position:relative;z-index:1;color:var(--ink);font-size:30px;letter-spacing:-.04em;margin-top:2px}.stat-sub{font-size:11px;color:#98a2b3}
+.dashboard-columns{gap:18px}.dashboard-card{border:1px solid var(--line);border-radius:18px;padding:18px;background:#fff;box-shadow:var(--shadow-sm);transition:.2s}.dashboard-card:hover{box-shadow:var(--shadow)}.dashboard-card-title{font-size:14px;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}.dashboard-card-title:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--brand)}
+.dashboard-table th{background:#f7f9fc;color:#667085;font-size:10px;text-transform:uppercase;letter-spacing:.05em}.dashboard-table td{border-bottom:1px solid #eef1f5;font-size:12px}.dashboard-loading{padding:38px;color:#98a2b3}.dashboard-loading:before{content:"";display:inline-block;width:18px;height:18px;border:2px solid #dce4f1;border-top-color:var(--brand);border-radius:50%;vertical-align:-5px;margin-right:8px;animation:spin .8s linear infinite}
+
+/* COMMON CARDS / CONTROLS */
+.search-page,.monthly-page,.test-report-page{display:none;animation:pageIn .42s ease both}
+.search-card,.monthly-controls,.monthly-report-card,.test-report-controls,.test-report-preview{border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:var(--shadow-sm)}
+.search-card,.monthly-controls,.test-report-controls{padding:22px}.result-card{border:1px solid var(--line);border-radius:15px;box-shadow:none}.search-input{height:50px;background:#f7f9fc;border:1px solid #dce3ed;border-radius:12px}.search-input:focus{background:#fff;border-color:#7591e3;box-shadow:0 0 0 4px rgba(36,87,214,.08)}
+select,.tr-grid input{border-color:#dce3ed;border-radius:10px;background:#f9fbfd}select:focus,.tr-grid input:focus{outline:none;border-color:#7591e3;box-shadow:0 0 0 4px rgba(36,87,214,.08)}
+.app-button{height:46px;border-radius:10px;background:linear-gradient(135deg,var(--brand),#3f6fe4);transition:.2s;box-shadow:0 7px 15px rgba(36,87,214,.13)}.app-button:hover{background:linear-gradient(135deg,#1e4ec5,#345fd2);transform:translateY(-1px)}
+.refresh-button{background:linear-gradient(135deg,#159d61,#12b76a)}.logout-button{background:#eef2f6}.status{color:#7b8799}
+.monthly-controls-grid{gap:14px}.monthly-report-card{padding:22px}.monthly-report-title{font-size:17px}.monthly-table th{background:#f5f7fa}.monthly-table th,.monthly-table td{border-color:#e2e7ee}
+.test-report-controls{padding:22px}.test-report-preview{padding:24px}.tr-grid{gap:14px}
+
+/* page transitions / micro-interactions */
+.dashboard-page > *, .search-page > *, .monthly-page > *, .test-report-page > *{animation:fadeUp .45s ease both}.dashboard-page > *:nth-child(2){animation-delay:.04s}.dashboard-page > *:nth-child(3){animation-delay:.08s}.dashboard-page > *:nth-child(4){animation-delay:.12s}
+button:active{transform:scale(.985)}
+
+/* Keep print report behavior intact */
+@media print{
+  .app-sidebar,.app-topbar{display:none!important}.app-main{margin-left:0}.app-content{padding:0}.test-report-page{display:block!important}.test-report-controls{display:none!important}
+}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes floatOrb{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,16px,0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.42}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:1050px){
+  .app-sidebar{width:220px}.app-main{margin-left:220px}.stats-grid{grid-template-columns:repeat(2,1fr)}.login-wrapper{gap:45px}
+}
+@media(max-width:760px){
+  .login-wrapper{grid-template-columns:1fr;gap:28px;max-width:470px}.login-left{text-align:center}.login-left:before{margin-bottom:13px}.login-left:after{margin-top:17px}.login-card{margin:auto;padding:25px}
+  .app-sidebar{left:10px;right:10px;bottom:10px;top:auto;width:auto;height:70px;padding:8px 10px;border-radius:20px;flex-direction:row;box-shadow:0 16px 40px rgba(16,24,40,.22);background:rgba(15,29,59,.96);backdrop-filter:blur(16px)}
+  .sidebar-brand,.sidebar-foot,.nav-label{display:none}.sidebar-nav{width:100%;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}.header-button{height:54px;justify-content:center;flex-direction:column;gap:3px;padding:5px;border-radius:14px;font-size:9px}.header-button.active{box-shadow:none}.nav-icon{font-size:18px}.nav-text{flex:none}.app-main{margin-left:0;padding-bottom:82px}.app-topbar{height:62px;padding:0 17px}.mobile-brand{display:flex}.topbar-caption{display:none}.app-content{padding:17px 14px 28px}.stats-grid{grid-template-columns:1fr 1fr;gap:10px}.stat-card{padding:15px}.stat-value{font-size:24px}.dashboard-columns{grid-template-columns:1fr}.dashboard-title-card{padding:21px}.dashboard-title-row{align-items:flex-start}.dashboard-refresh{padding:9px}.tr-grid{grid-template-columns:1fr}.tr-full{grid-column:auto}.test-report-preview{padding:10px;overflow:auto}
+}
+@media(max-width:430px){.stats-grid{grid-template-columns:1fr}.login-page{padding:16px}.login-wrapper{min-height:calc(100vh - 32px)}.logo{font-size:43px}.tagline{font-size:18px}.login-card{border-radius:20px}.dashboard-title{font-size:21px}}
 </style>
 </head>
-
-<body>
-
-<!-- =========================
-     LOGIN
-========================= -->
-
-<div id="loginBox" class="login-page">
-
-    <div class="login-wrapper">
-
-        <div class="login-left">
-
-            <div class="logo">
+<body><div class="login-page" id="loginBox">
+<div class="login-wrapper">
+<div class="login-left">
+<div class="logo">
                 Rahul Software
             </div>
-
-            <div class="tagline">
+<div class="tagline">
                 Your Excel data, available anywhere.
             </div>
-
-        </div>
-
-        <div class="login-card">
-
-            <input
-                type="text"
-                id="username"
-                placeholder="Username"
-                autocomplete="username"
-            >
-
-            <input
-                type="password"
-                id="password"
-                placeholder="Password"
-                autocomplete="current-password"
-            >
-
-            <button
-                class="login-button"
-                onclick="login()"
-            >
+</div>
+<div class="login-card">
+<input autocomplete="username" id="username" placeholder="Username" type="text"/>
+<input autocomplete="current-password" id="password" placeholder="Password" type="password"/>
+<button class="login-button" onclick="login()">
                 Log In
             </button>
-
-            <div
-                id="loginStatus"
-                class="login-status"
-            ></div>
-
-            <div class="login-divider"></div>
-
-            <div class="software-name">
+<div class="login-status" id="loginStatus"></div>
+<div class="login-divider"></div>
+<div class="software-name">
                 Rahul Software • Secure Data Access
             </div>
-
-        </div>
-
-    </div>
-
 </div>
-
-
-<!-- =========================
-     MAIN APP
-========================= -->
-
-<div id="appBox" class="app-page hidden">
-
-    <div class="app-header">
-
-        <div class="app-header-inner">
-
-            <div class="app-logo">
-                Rahul Software
-            </div>
-
-            <div class="header-buttons">
-
-                <button
-                    id="dashboardButton"
-                    class="header-button active"
-                    onclick="showDashboard()"
-                >
-                    DASHBOARD
-                </button>
-
-                <button
-                    id="searchButton"
-                    class="header-button"
-                    onclick="showSearch()"
-                >
-                    SEARCH
-                </button>
-
-                <button
-                    id="monthlyButton"
-                    class="header-button"
-                    onclick="showMonthlyReport()"
-                >
-                    MONTHLY REPORT
-                </button>
-
-                <button
-                    id="testReportButton"
-                    class="header-button"
-                    onclick="showTestReport()"
-                >
-                    TEST REPORT
-                </button>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-    <div class="app-content">
-
-        <!-- =========================
-             DASHBOARD
-        ========================= -->
-
-        <div
-            id="dashboardPage"
-            class="dashboard-page"
-        >
-
-            <div class="dashboard-title-card">
-
-                <div class="dashboard-title-row">
-
-                    <div>
-
-                        <div class="dashboard-title">
+</div>
+</div><div class="app-page hidden" id="appBox"><aside class="app-sidebar"><div class="sidebar-brand"><div class="brand-mark">R</div><div class="brand-text"><div class="brand-name">Rahul Software</div><div class="brand-sub">Operations Console</div></div></div><nav class="sidebar-nav"><div class="nav-label">WORKSPACE</div><button class="header-button active" id="dashboardButton" onclick="showDashboard()"><span class="nav-icon">▦</span><span class="nav-text">Dashboard</span></button><button class="header-button" id="searchButton" onclick="showSearch()"><span class="nav-icon">⌕</span><span class="nav-text">Search</span></button><button class="header-button" id="monthlyButton" onclick="showMonthlyReport()"><span class="nav-icon">▤</span><span class="nav-text">Monthly Report</span></button><button class="header-button" id="testReportButton" onclick="showTestReport()"><span class="nav-icon">▣</span></button></nav><div class="sidebar-foot"><div class="sidebar-status-dot"></div><span>Connected workspace</span></div></aside><main class="app-main"><header class="app-topbar"><div class="mobile-brand"><div class="mobile-mark">R</div><span>Rahul Software</span></div><div class="topbar-right"><div class="live-chip"><span class="live-dot"></span> LIVE DATA</div><div class="topbar-caption">Secure • Cloud connected</div></div></header><div class="app-content"><div class="dashboard-page" id="dashboardPage">
+<div class="dashboard-title-card">
+<div class="dashboard-title-row">
+<div>
+<div class="dashboard-title">
                             Business Dashboard
                         </div>
-
-                        <div
-                            id="dashboardDate"
-                            class="dashboard-date"
-                        >
+<div class="dashboard-date" id="dashboardDate">
                             Loading...
                         </div>
-
-                    </div>
-
-                    <button
-                        class="dashboard-refresh"
-                        onclick="loadDashboard()"
-                    >
+</div>
+<button class="dashboard-refresh" onclick="loadDashboard()">
                         ↻ REFRESH
                     </button>
-
-                </div>
-
-            </div>
-
-
-            <div
-                id="dashboardLoading"
-                class="dashboard-loading"
-            >
+</div>
+</div>
+<div class="dashboard-loading" id="dashboardLoading">
                 Dashboard loading...
             </div>
-
-
-            <div
-                id="dashboardContent"
-                class="hidden"
-            >
-
-                <div class="stats-grid">
-
-                    <div class="stat-card">
-                        <div class="stat-label">
+<div class="hidden" id="dashboardContent">
+<div class="stats-grid">
+<div class="stat-card">
+<div class="stat-label">
                             Total Orders
                         </div>
-
-                        <div
-                            id="totalOrders"
-                            class="stat-value"
-                        >
+<div class="stat-value" id="totalOrders">
                             0
                         </div>
-
-                        <div class="stat-sub">
+<div class="stat-sub">
                             Unique orders
                         </div>
-                    </div>
-
-
-                    <div class="stat-card">
-
-                        <div class="stat-label">
+</div>
+<div class="stat-card">
+<div class="stat-label">
                             Order Quantity
                         </div>
-
-                        <div
-                            id="totalOrderQty"
-                            class="stat-value"
-                        >
+<div class="stat-value" id="totalOrderQty">
                             0
                         </div>
-
-                        <div class="stat-sub">
+<div class="stat-sub">
                             Total pcs
                         </div>
-
-                    </div>
-
-
-                    <div class="stat-card">
-
-                        <div class="stat-label">
+</div>
+<div class="stat-card">
+<div class="stat-label">
                             Total Dispatch
                         </div>
-
-                        <div
-                            id="totalDispatch"
-                            class="stat-value"
-                        >
+<div class="stat-value" id="totalDispatch">
                             0
                         </div>
-
-                        <div class="stat-sub">
+<div class="stat-sub">
                             Dispatch entries
                         </div>
-
-                    </div>
-
-
-                    <div class="stat-card">
-
-                        <div class="stat-label">
+</div>
+<div class="stat-card">
+<div class="stat-label">
                             Dispatch Quantity
                         </div>
-
-                        <div
-                            id="totalDispatchQty"
-                            class="stat-value"
-                        >
+<div class="stat-value" id="totalDispatchQty">
                             0
                         </div>
-
-                        <div class="stat-sub">
+<div class="stat-sub">
                             Total pcs
                         </div>
-
-                    </div>
-
-
-                    <div class="stat-card">
-
-                        <div class="stat-label">
+</div>
+<div class="stat-card">
+<div class="stat-label">
                             Hold Orders
                         </div>
-
-                        <div
-                            id="holdOrders"
-                            class="stat-value"
-                        >
+<div class="stat-value" id="holdOrders">
                             0
                         </div>
-
-                        <div class="stat-sub">
+<div class="stat-sub">
                             Orders on hold
                         </div>
-
-                    </div>
-
-
-                    <div class="stat-card">
-
-                        <div class="stat-label">
+</div>
+<div class="stat-card">
+<div class="stat-label">
                             Hold Quantity
                         </div>
-
-                        <div
-                            id="holdQty"
-                            class="stat-value"
-                        >
+<div class="stat-value" id="holdQty">
                             0
                         </div>
-
-                        <div class="stat-sub">
+<div class="stat-sub">
                             Hold pcs
                         </div>
-
-                    </div>
-
-
-                    <div class="stat-card">
-
-                        <div class="stat-label">
+</div>
+<div class="stat-card">
+<div class="stat-label">
                             Today's Orders
                         </div>
-
-                        <div
-                            id="todayOrders"
-                            class="stat-value"
-                        >
+<div class="stat-value" id="todayOrders">
                             0
                         </div>
-
-                        <div class="stat-sub">
+<div class="stat-sub">
                             Today's entries
                         </div>
-
-                    </div>
-
-
-                    <div class="stat-card">
-
-                        <div class="stat-label">
+</div>
+<div class="stat-card">
+<div class="stat-label">
                             Today's Dispatch
                         </div>
-
-                        <div
-                            id="todayDispatch"
-                            class="stat-value"
-                        >
+<div class="stat-value" id="todayDispatch">
                             0
                         </div>
-
-                        <div class="stat-sub">
+<div class="stat-sub">
                             Today's entries
                         </div>
-
-                    </div>
-
-                </div>
-
-
-                <div class="dashboard-card">
-
-                    <div class="dashboard-card-title">
+</div>
+</div>
+<div class="dashboard-card">
+<div class="dashboard-card-title">
                         Today's Report
                     </div>
-
-                    <div class="stats-grid">
-
-                        <div class="stat-card">
-
-                            <div class="stat-label">
+<div class="stats-grid">
+<div class="stat-card">
+<div class="stat-label">
                                 Today's Order Quantity
                             </div>
-
-                            <div
-                                id="todayOrderQty"
-                                class="stat-value"
-                            >
+<div class="stat-value" id="todayOrderQty">
                                 0
                             </div>
-
-                            <div class="stat-sub">
+<div class="stat-sub">
                                 Pcs
                             </div>
-
-                        </div>
-
-
-                        <div class="stat-card">
-
-                            <div class="stat-label">
+</div>
+<div class="stat-card">
+<div class="stat-label">
                                 Today's Dispatch Quantity
                             </div>
-
-                            <div
-                                id="todayDispatchQty"
-                                class="stat-value"
-                            >
+<div class="stat-value" id="todayDispatchQty">
                                 0
                             </div>
-
-                            <div class="stat-sub">
+<div class="stat-sub">
                                 Pcs
                             </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <div class="dashboard-columns">
-
-                    <div class="dashboard-card">
-
-                        <div class="dashboard-card-title">
+</div>
+</div>
+</div>
+<div class="dashboard-columns">
+<div class="dashboard-card">
+<div class="dashboard-card-title">
                             Size-wise Orders
                         </div>
-
-                        <div class="dashboard-table-wrap">
-
-                            <table class="dashboard-table">
-
-                                <thead>
-
-                                    <tr>
-                                        <th>Size</th>
-                                        <th>Orders</th>
-                                        <th>Quantity</th>
-                                    </tr>
-
-                                </thead>
-
-                                <tbody
-                                    id="sizeWiseTable"
-                                >
-                                </tbody>
-
-                            </table>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="dashboard-card">
-
-                        <div class="dashboard-card-title">
+<div class="dashboard-table-wrap">
+<table class="dashboard-table">
+<thead>
+<tr>
+<th>Size</th>
+<th>Orders</th>
+<th>Quantity</th>
+</tr>
+</thead>
+<tbody id="sizeWiseTable">
+</tbody>
+</table>
+</div>
+</div>
+<div class="dashboard-card">
+<div class="dashboard-card-title">
                             Party-wise Orders
                         </div>
-
-                        <div class="dashboard-table-wrap">
-
-                            <table class="dashboard-table">
-
-                                <thead>
-
-                                    <tr>
-                                        <th>Party</th>
-                                        <th>Orders</th>
-                                        <th>Quantity</th>
-                                    </tr>
-
-                                </thead>
-
-                                <tbody
-                                    id="partyWiseTable"
-                                >
-                                </tbody>
-
-                            </table>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <div class="dashboard-card">
-
-                    <div class="dashboard-date">
+<div class="dashboard-table-wrap">
+<table class="dashboard-table">
+<thead>
+<tr>
+<th>Party</th>
+<th>Orders</th>
+<th>Quantity</th>
+</tr>
+</thead>
+<tbody id="partyWiseTable">
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="dashboard-card">
+<div class="dashboard-date">
 
                         Last updated:
 
                         <strong id="lastUpdated">
                             -
                         </strong>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <!-- =========================
-             MONTHLY REPORT
-        ========================= -->
-
-        <div
-            id="monthlyPage"
-            class="monthly-page"
-        >
-
-            <div class="monthly-controls">
-
-                <div class="dashboard-card-title">
+</div>
+</div>
+</div>
+</div><div class="monthly-page" id="monthlyPage">
+<div class="monthly-controls">
+<div class="dashboard-card-title">
                     Monthly Dispatch Report
                 </div>
-
-                <div class="monthly-controls-grid">
-
-                    <select id="reportYear"></select>
-
-                    <select id="reportMonth">
-
-                        <option value="1">JANUARY</option>
-                        <option value="2">FEBRUARY</option>
-                        <option value="3">MARCH</option>
-                        <option value="4">APRIL</option>
-                        <option value="5">MAY</option>
-                        <option value="6">JUNE</option>
-                        <option value="7">JULY</option>
-                        <option value="8">AUGUST</option>
-                        <option value="9">SEPTEMBER</option>
-                        <option value="10">OCTOBER</option>
-                        <option value="11">NOVEMBER</option>
-                        <option value="12">DECEMBER</option>
-
-                    </select>
-
-                    <button
-                        class="app-button"
-                        onclick="loadMonthlyReport()"
-                    >
+<div class="monthly-controls-grid">
+<select id="reportYear"></select>
+<select id="reportMonth">
+<option value="1">JANUARY</option>
+<option value="2">FEBRUARY</option>
+<option value="3">MARCH</option>
+<option value="4">APRIL</option>
+<option value="5">MAY</option>
+<option value="6">JUNE</option>
+<option value="7">JULY</option>
+<option value="8">AUGUST</option>
+<option value="9">SEPTEMBER</option>
+<option value="10">OCTOBER</option>
+<option value="11">NOVEMBER</option>
+<option value="12">DECEMBER</option>
+</select>
+<button class="app-button" onclick="loadMonthlyReport()">
                         LOAD REPORT
                     </button>
-
-                </div>
-
-                <div
-                    id="monthlyStatus"
-                    class="status"
-                ></div>
-
-            </div>
-
-
-            <div
-                id="monthlyReportCard"
-                class="monthly-report-card hidden"
-            >
-
-                <div
-                    id="monthlyReportTitle"
-                    class="monthly-report-title"
-                ></div>
-
-                <div class="monthly-table-wrap">
-
-                    <table class="monthly-table">
-
-                        <thead
-                            id="monthlyTableHead"
-                        ></thead>
-
-                        <tbody
-                            id="monthlyTableBody"
-                        ></tbody>
-
-                    </table>
-
-                </div>
-
-                <div
-                    id="monthlySummary"
-                    class="monthly-summary"
-                ></div>
-
-            </div>
-
-        </div>
-
-
-        <!-- =========================
-             TEST REPORT
-        ========================= -->
-
-        <div
-            id="testReportPage"
-            class="test-report-page"
-        >
-
-            <div class="test-report-controls">
-
-                <div class="dashboard-card-title">
+</div>
+<div class="status" id="monthlyStatus"></div>
+</div>
+<div class="monthly-report-card hidden" id="monthlyReportCard">
+<div class="monthly-report-title" id="monthlyReportTitle"></div>
+<div class="monthly-table-wrap">
+<table class="monthly-table">
+<thead id="monthlyTableHead"></thead>
+<tbody id="monthlyTableBody"></tbody>
+</table>
+</div>
+<div class="monthly-summary" id="monthlySummary"></div>
+</div>
+</div><div class="test-report-page" id="testReportPage">
+<div class="test-report-controls">
+<div class="dashboard-card-title">
                     Test Report
                 </div>
-
-                <div class="tr-mobile-note">
+<div class="tr-mobile-note">
                     Report banane ke liye details select/enter karein.
                 </div>
-
-
-                <div class="tr-grid">
-
-
-                    <div>
-
-                        <label>
+<div class="tr-grid">
+<div>
+<label>
                             Party Name
                         </label>
-
-                        <select
-                            id="trParty"
-                            onchange="trPartyChanged()"
-                        >
-
-                            <option value="">
+<select id="trParty" onchange="trPartyChanged()">
+<option value="">
                                 Loading...
                             </option>
-
-                        </select>
-
-                    </div>
-
-
-                    <div>
-
-                        <label>
+</select>
+</div>
+<div>
+<label>
                             Address
                         </label>
-
-                        <div
-                            id="trAddress"
-                            class="tr-address"
-                        >
+<div class="tr-address" id="trAddress">
                             -
                         </div>
-
-                    </div>
-
-
-                    <div>
-
-                        <label>
+</div>
+<div>
+<label>
                             PO No.
                         </label>
-
-                        <select
-                            id="trPoMode"
-                            onchange="trPoModeChanged()"
-                        >
-
-                            <option>
+<select id="trPoMode" onchange="trPoModeChanged()">
+<option>
                                 AS PER SHEET
                             </option>
-
-                            <option>
+<option>
                                 VERBAL
                             </option>
-
-                            <option>
+<option>
                                 MANUAL
                             </option>
-
-                        </select>
-
-                        <input
-                            id="trPoNo"
-                            placeholder="PO Number"
-                            style="display:none"
-                        >
-
-                    </div>
-
-
-                    <div>
-
-                        <label>
+</select>
+<input id="trPoNo" placeholder="PO Number" style="display:none"/>
+</div>
+<div>
+<label>
                             PO Date
                         </label>
-
-                        <input
-                            id="trPoDate"
-                            type="date"
-                        >
-
-                    </div>
-
-
-                    <div>
-
-                        <label>
+<input id="trPoDate" type="date"/>
+</div>
+<div>
+<label>
                             Bill No.
                         </label>
-
-                        <select
-                            id="trBillMode"
-                            onchange="trBillModeChanged()"
-                        >
-
-                            <option>
+<select id="trBillMode" onchange="trBillModeChanged()">
+<option>
                                 AUTO NEXT
                             </option>
-
-                            <option>
+<option>
                                 MANUAL
                             </option>
-
-                        </select>
-
-                        <input
-                            id="trBillNo"
-                            placeholder="MP/26-27/408"
-                            style="display:none"
-                        >
-
-                    </div>
-
-
-                    <div>
-
-                        <label>
+</select>
+<input id="trBillNo" placeholder="MP/26-27/408" style="display:none"/>
+</div>
+<div>
+<label>
                             Bill Date
                         </label>
-
-                        <input
-                            id="trBillDate"
-                            type="date"
-                        >
-
-                    </div>
-
-
-                    <div>
-
-                        <label>
+<input id="trBillDate" type="date"/>
+</div>
+<div>
+<label>
                             Size
                         </label>
-
-                        <input
-                            id="trSize"
-                            placeholder="1200+75X1000+75"
-                            oninput="parseTestSize()"
-                        >
-
-                    </div>
-
-
-                    <div>
-
-                        <label>
+<input id="trSize" oninput="parseTestSize()" placeholder="1200+75X1000+75"/>
+</div>
+<div>
+<label>
                             Thickness (mm)
                         </label>
-
-                        <input
-                            id="trThickness"
-                            type="number"
-                            step="0.01"
-                            value="0.90"
-                        >
-
-                    </div>
-
-
-                    <div>
-
-                        <label>
+<input id="trThickness" step="0.01" type="number" value="0.90"/>
+</div>
+<div>
+<label>
                             GSM
                         </label>
-
-                        <select
-                            id="trGsm"
-                            onchange="trGsmChanged()"
-                        >
-
-                            <option>710</option>
-                            <option>800</option>
-                            <option>900</option>
-                            <option>950</option>
-                            <option>1050</option>
-                            <option>MANUAL</option>
-
-                        </select>
-
-                        <input
-                            id="trGsmManual"
-                            placeholder="GSM"
-                            style="display:none"
-                        >
-
-                    </div>
-
-
-                    <div>
-
-                        <label>
+<select id="trGsm" onchange="trGsmChanged()">
+<option>710</option>
+<option>800</option>
+<option>900</option>
+<option>950</option>
+<option>1050</option>
+<option>MANUAL</option>
+</select>
+<input id="trGsmManual" placeholder="GSM" style="display:none"/>
+</div>
+<div>
+<label>
                             BF
                         </label>
-
-                        <input
-                            id="trBf"
-                            value="40"
-                        >
-
-                    </div>
-
-
-                    <div class="tr-full">
-
-                        <label>
+<input id="trBf" value="40"/>
+</div>
+<div class="tr-full">
+<label>
                             Specification
                         </label>
-
-                        <input
-                            id="trSpecification"
-                            placeholder=""
-                        >
-
-                    </div>
-
-                </div>
-
-
-                <div class="tr-actions">
-
-                    <button
-                        class="app-button"
-                        onclick="generateTestReport()"
-                    >
+<input id="trSpecification" placeholder=""/>
+</div>
+</div>
+<div class="tr-actions">
+<button class="app-button" onclick="generateTestReport()">
                         GENERATE REPORT
                     </button>
-
-                    <button
-                        class="app-button refresh-button"
-                        onclick="printTestReport()"
-                    >
+<button class="app-button refresh-button" onclick="printTestReport()">
                         PRINT REPORT
                     </button>
-
-                </div>
-
-
-                <div
-                    id="testReportStatus"
-                    class="status"
-                ></div>
-
-            </div>
-
-
-            <div
-                id="testReportPreview"
-                class="test-report-preview hidden"
-            ></div>
-
-        </div>
-
-
-        <!-- =========================
-             SEARCH
-        ========================= -->
-
-        <div
-            id="searchPage"
-            class="search-page"
-        >
-
-            <div class="search-card">
-
-                <input
-                    class="search-input"
-                    type="text"
-                    id="searchBox"
-                    placeholder="Search order, party, invoice, vehicle..."
-                    onkeydown="if(event.key==='Enter') searchData()"
-                >
-
-                <select id="sheetSelect">
-
-                    <option value="ALL SHEETS">
+</div>
+<div class="status" id="testReportStatus"></div>
+</div>
+<div class="test-report-preview hidden" id="testReportPreview"></div>
+</div><div class="search-page" id="searchPage">
+<div class="search-card">
+<input class="search-input" id="searchBox" onkeydown="if(event.key==='Enter') searchData()" placeholder="Search order, party, invoice, vehicle..." type="text"/>
+<select id="sheetSelect">
+<option value="ALL SHEETS">
                         ALL SHEETS
                     </option>
-
-                </select>
-
-
-                <button
-                    class="app-button"
-                    onclick="searchData()"
-                >
+</select>
+<button class="app-button" onclick="searchData()">
                     SEARCH
                 </button>
-
-
-                <button
-                    class="app-button refresh-button"
-                    onclick="loadSheets()"
-                >
+<button class="app-button refresh-button" onclick="loadSheets()">
                     REFRESH SHEETS
                 </button>
-
-
-                <button
-                    class="app-button logout-button"
-                    onclick="logout()"
-                >
+<button class="app-button logout-button" onclick="logout()">
                     LOGOUT
                 </button>
-
-
-                <div
-                    id="status"
-                    class="status"
-                ></div>
-
-            </div>
-
-
-            <div id="results"></div>
-
-        </div>
-
-    </div>
-
+<div class="status" id="status"></div>
 </div>
-
-
-<script>
+<div id="results"></div>
+</div></div></main></div><script>
 
 const API_URL =
     "https://backend-software-e1jw.onrender.com";
@@ -2145,31 +1628,6 @@ function showMonthlyReport(){
         .classList.add("active");
 
     initializeReportYears();
-
-}
-
-
-function showTestReport(){
-
-    hideAllPages();
-
-    document
-        .getElementById("testReportPage")
-        .style.display = "block";
-
-    document
-        .getElementById("testReportButton")
-        .classList.add("active");
-
-    document
-        .getElementById("trBillDate")
-        .value =
-        document
-        .getElementById("trBillDate")
-        .value ||
-        todayInputDate();
-
-    loadTestReportMaster();
 
 }
 
@@ -3074,521 +2532,6 @@ function renderMonthlyReport(data){
 
 
 /* =========================
-   TEST REPORT
-========================= */
-
-let testReportMaster = [];
-
-let testReportGenerated = null;
-
-
-function todayInputDate(){
-
-    const d =
-        new Date();
-
-    return (
-        d.getFullYear() +
-        "-" +
-        String(
-            d.getMonth() + 1
-        ).padStart(2,"0") +
-        "-" +
-        String(
-            d.getDate()
-        ).padStart(2,"0")
-    );
-
-}
-
-
-async function loadTestReportMaster(){
-
-    const status =
-        document.getElementById(
-            "testReportStatus"
-        );
-
-
-    const select =
-        document.getElementById(
-            "trParty"
-        );
-
-
-    status.textContent =
-        "Party list load ho rahi hai...";
-
-
-    try{
-
-        const data =
-            await apiFetch(
-                API_URL +
-                "/test-report/master-data"
-            );
-
-
-        testReportMaster =
-            data.parties || [];
-
-
-        select.innerHTML =
-            '<option value="">SELECT PARTY</option>';
-
-
-        testReportMaster.forEach(
-            (
-                party,
-                index
-            ) => {
-
-                const option =
-                    document.createElement(
-                        "option"
-                    );
-
-                option.value =
-                    String(index);
-
-                option.textContent =
-                    party.party;
-
-                select.appendChild(
-                    option
-                );
-
-            }
-        );
-
-
-        status.textContent =
-            testReportMaster.length +
-            " parties loaded.";
-
-        status.className =
-            "status success";
-
-    }
-    catch(error){
-
-        status.textContent =
-            error.message;
-
-        status.className =
-            "status error";
-
-    }
-
-}
-
-
-function trPartyChanged(){
-
-    const index =
-        document
-        .getElementById(
-            "trParty"
-        )
-        .value;
-
-
-    const party =
-        testReportMaster[
-            Number(index)
-        ];
-
-
-    document
-        .getElementById(
-            "trAddress"
-        )
-        .textContent =
-        party
-            ? party.address
-            : "-";
-
-}
-
-
-function trPoModeChanged(){
-
-    const mode =
-        document
-        .getElementById(
-            "trPoMode"
-        )
-        .value;
-
-
-    document
-        .getElementById(
-            "trPoNo"
-        )
-        .style.display =
-        mode === "MANUAL"
-            ? "block"
-            : "none";
-
-}
-
-
-function trBillModeChanged(){
-
-    const mode =
-        document
-        .getElementById(
-            "trBillMode"
-        )
-        .value;
-
-
-    document
-        .getElementById(
-            "trBillNo"
-        )
-        .style.display =
-        mode === "MANUAL"
-            ? "block"
-            : "none";
-
-}
-
-
-function trGsmChanged(){
-
-    const mode =
-        document
-        .getElementById(
-            "trGsm"
-        )
-        .value;
-
-
-    document
-        .getElementById(
-            "trGsmManual"
-        )
-        .style.display =
-        mode === "MANUAL"
-            ? "block"
-            : "none";
-
-}
-
-
-function parseTestSize(){
-
-    const raw =
-        document
-        .getElementById(
-            "trSize"
-        )
-        .value
-        .trim()
-        .replace(
-            /×/g,
-            "X"
-        )
-        .replace(
-            /\s+/g,
-            ""
-        )
-        .toUpperCase();
-
-
-    const status =
-        document.getElementById(
-            "testReportStatus"
-        );
-
-
-    if(
-        !raw ||
-        !raw.includes("X")
-    ){
-
-        testReportGenerated =
-            null;
-
-        return null;
-
-    }
-
-
-    const parts =
-        raw.split("X");
-
-
-    if(parts.length !== 2){
-
-        status.textContent =
-            "Size format galat hai.";
-
-        status.className =
-            "status error";
-
-        return null;
-
-    }
-
-
-    const nums =
-        value =>
-            value
-            .split("+")
-            .filter(Boolean)
-            .map(Number);
-
-
-    const a =
-        nums(parts[0]);
-
-    const b =
-        nums(parts[1]);
-
-
-    let result = null;
-
-
-    if(
-        a.length === 1 &&
-        b.length === 1
-    ){
-
-        result = {
-
-            rows:[
-                [
-                    "Total Length",
-                    a[0]
-                ],
-
-                [
-                    "Total Width",
-                    b[0]
-                ]
-            ]
-
-        };
-
-    }
-
-    else if(
-        a.length === 2 &&
-        b.length === 1
-    ){
-
-        result = {
-
-            rows:[
-                [
-                    "Total Length",
-                    a[0]
-                ],
-
-                [
-                    "1 Tab at Length",
-                    a[1]
-                ],
-
-                [
-                    "Total Width",
-                    b[0]
-                ]
-            ]
-
-        };
-
-    }
-
-    else if(
-        a.length === 3 &&
-        b.length === 1
-    ){
-
-        result = {
-
-            rows:[
-                [
-                    "Total Length",
-                    a[1]
-                ],
-
-                [
-                    "1 Tab at Length",
-                    a[0]
-                ],
-
-                [
-                    "2 Tab at Length",
-                    a[2]
-                ],
-
-                [
-                    "Total Width",
-                    b[0]
-                ]
-            ]
-
-        };
-
-    }
-
-    else if(
-        a.length === 1 &&
-        b.length === 3
-    ){
-
-        result = {
-
-            rows:[
-                [
-                    "Total Length",
-                    a[0]
-                ],
-
-                [
-                    "Total Width",
-                    b[1]
-                ],
-
-                [
-                    "1 Tab at Width",
-                    b[0]
-                ],
-
-                [
-                    "2 Tab at Width",
-                    b[2]
-                ]
-            ]
-
-        };
-
-    }
-
-    else if(
-        a.length === 2 &&
-        b.length === 2
-    ){
-
-        result = {
-
-            rows:[
-                [
-                    "Total Length",
-                    a[0]
-                ],
-
-                [
-                    "1 Tab at Length",
-                    a[1]
-                ],
-
-                [
-                    "Total Width",
-                    b[0]
-                ],
-
-                [
-                    "1 Tab at Width",
-                    b[1]
-                ]
-            ]
-
-        };
-
-    }
-
-    else if(
-        a.length === 3 &&
-        b.length === 3
-    ){
-
-        result = {
-
-            rows:[
-                [
-                    "Total Length",
-                    a[1]
-                ],
-
-                [
-                    "1 Tab at Length",
-                    a[0]
-                ],
-
-                [
-                    "2 Tab at Length",
-                    a[2]
-                ],
-
-                [
-                    "Total Width",
-                    b[1]
-                ],
-
-                [
-                    "1 Tab at Width",
-                    b[0]
-                ],
-
-                [
-                    "2 Tab at Width",
-                    b[2]
-                ]
-            ]
-
-        };
-
-    }
-
-    else{
-
-        status.textContent =
-            "Unsupported size format.";
-
-        status.className =
-            "status error";
-
-        return null;
-
-    }
-
-
-    result.size =
-        raw;
-
-
-    result.thickness =
-        Number(
-            document
-            .getElementById(
-                "trThickness"
-            )
-            .value ||
-            0.90
-        );
-
-
-    testReportGenerated =
-        result;
-
-
-    status.textContent =
-        "Size read ho gaya.";
-
-    status.className =
-        "status success";
-
-
-    return result;
-
-}
-
-
-/* =========================
    RANDOM VALUES
 ========================= */
 
@@ -3745,389 +2688,6 @@ function actualTC(
 
 
 /* =========================
-   TEST REPORT GENERATE
-========================= */
-
-async function generateTestReport(){
-
-    const status =
-        document
-        .getElementById(
-            "testReportStatus"
-        );
-
-
-    try{
-
-        const party =
-            testReportMaster[
-                Number(
-                    document
-                    .getElementById(
-                        "trParty"
-                    )
-                    .value
-                )
-            ];
-
-
-        if(!party){
-
-            throw new Error(
-                "Party select karo."
-            );
-
-        }
-
-
-        const size =
-            parseTestSize();
-
-
-        if(!size){
-
-            throw new Error(
-                "Valid size enter karo."
-            );
-
-        }
-
-
-        const poMode =
-            document
-            .getElementById(
-                "trPoMode"
-            )
-            .value;
-
-
-        const po =
-            poMode === "MANUAL"
-                ? document
-                  .getElementById(
-                      "trPoNo"
-                  )
-                  .value
-                  .trim()
-                : poMode;
-
-
-        if(
-            poMode === "MANUAL" &&
-            !po
-        ){
-
-            throw new Error(
-                "PO No. bharo."
-            );
-
-        }
-
-
-        let bill;
-
-
-        const billMode =
-            document
-            .getElementById(
-                "trBillMode"
-            )
-            .value;
-
-
-        if(
-            billMode === "MANUAL"
-        ){
-
-            bill =
-                document
-                .getElementById(
-                    "trBillNo"
-                )
-                .value
-                .trim();
-
-
-            if(!bill){
-
-                throw new Error(
-                    "Bill No. bharo."
-                );
-
-            }
-
-        }
-        else{
-
-            const result =
-                await apiFetch(
-                    API_URL +
-                    "/test-report/reserve-bill",
-                    {
-                        method:"POST"
-                    }
-                );
-
-
-            bill =
-                result.bill_no;
-
-        }
-
-
-        const billDate =
-            document
-            .getElementById(
-                "trBillDate"
-            )
-            .value ||
-            todayInputDate();
-
-
-        const poDate =
-            document
-            .getElementById(
-                "trPoDate"
-            )
-            .value ||
-            "";
-
-
-        const thickness =
-            Number(
-                document
-                .getElementById(
-                    "trThickness"
-                )
-                .value ||
-                0.90
-            );
-
-
-        const gsm =
-            document
-            .getElementById(
-                "trGsm"
-            )
-            .value === "MANUAL"
-                ? document
-                  .getElementById(
-                      "trGsmManual"
-                  )
-                  .value
-                : document
-                  .getElementById(
-                      "trGsm"
-                  )
-                  .value;
-
-
-        const bf =
-            document
-            .getElementById(
-                "trBf"
-            )
-            .value;
-
-
-        const specification =
-            document
-            .getElementById(
-                "trSpecification"
-            )
-            .value;
-
-
-        const actualRows =
-            size.rows.map(
-                pair => {
-
-                    const name =
-                        pair[0];
-
-                    const standard =
-                        pair[1];
-
-
-                    const isTab =
-                        name
-                        .toLowerCase()
-                        .includes(
-                            "tab"
-                        );
-
-
-                    return {
-
-                        name:name,
-
-                        standard:standard,
-
-                        tab:isTab,
-
-                        actuals:[
-                            1,
-                            2,
-                            3,
-                            4
-                        ].map(
-                            () =>
-                                isTab
-                                    ? actualTab(
-                                        standard
-                                      )
-                                    : actualTotal(
-                                        standard
-                                      )
-                        )
-
-                    };
-
-                }
-            );
-
-
-        actualRows.push({
-
-            name:"Thickness",
-
-            standard:thickness,
-
-            tab:false,
-
-            actuals:[
-                1,
-                2,
-                3,
-                4
-            ].map(
-                () =>
-                    actualThickness(
-                        thickness
-                    )
-            )
-
-        });
-
-
-        actualRows.push({
-
-            name:"Moisture",
-
-            standard:"10 % To 12 %",
-
-            tab:false,
-
-            actuals:[
-                1,
-                2,
-                3,
-                4
-            ].map(
-                () =>
-                    actualMoisture()
-            )
-
-        });
-
-
-        const tc =
-            tcStandard(
-                thickness
-            );
-
-
-        actualRows.push({
-
-            name:"TC",
-
-            standard:
-                tc === null
-                    ? "-"
-                    : tc + " kg",
-
-            tab:false,
-
-            actuals:[
-                1,
-                2,
-                3,
-                4
-            ].map(
-                () =>
-                    actualTC(
-                        thickness
-                    )
-            )
-
-        });
-
-
-        testReportGenerated = {
-
-            ...size,
-
-            party:
-                party.party,
-
-            address:
-                party.address,
-
-            po:
-                po,
-
-            poDate:
-                poDate,
-
-            bill:
-                bill,
-
-            billDate:
-                billDate,
-
-            gsm:
-                gsm,
-
-            bf:
-                bf,
-
-            specification:
-                specification,
-
-            actualRows:
-                actualRows
-
-        };
-
-
-        renderTestReport(
-            testReportGenerated
-        );
-
-
-        status.textContent =
-            "Report generated.";
-
-        status.className =
-            "status success";
-
-    }
-    catch(error){
-
-        console.error(error);
-
-        status.textContent =
-            error.message;
-
-        status.className =
-            "status error";
-
-    }
-
-}
-
-
-/* =========================
    DATE
 ========================= */
 
@@ -4158,375 +2718,6 @@ function fdate(value){
 
 
     return value;
-
-}
-
-
-/* =========================
-   TEST REPORT HTML
-========================= */
-
-function renderTestReport(
-    report
-){
-
-    const rows =
-        report.actualRows
-        .map(
-            item => {
-
-                const tolerance =
-                    item.name === "Moisture"
-                        ? "± 2 %"
-                        : item.name === "TC"
-                            ? "± 150 kg"
-                            : item.name === "Thickness"
-                                ? "± 0.3mm"
-                                : item.tab
-                                    ? "± 5mm"
-                                    : "± 10mm";
-
-
-                const standardText =
-                    item.name === "Moisture"
-                        ? String(
-                            item.standard
-                          )
-                        : item.name === "TC"
-                            ? String(
-                                item.standard
-                              )
-                            : String(
-                                item.standard
-                              ) +
-                              (
-                                item.name ===
-                                "Thickness"
-                                    ? "mm"
-                                    : "mm"
-                              );
-
-
-                const actualCells =
-                    (
-                        item.actuals ||
-                        []
-                    )
-                    .map(
-                        value =>
-                            "<td>" +
-                            escapeHtml(
-                                String(value)
-                            ) +
-                            "</td>"
-                    )
-                    .join("");
-
-
-                return (
-                    "<tr>" +
-
-                    "<td>" +
-                    escapeHtml(
-                        item.name
-                    ) +
-                    "</td>" +
-
-                    "<td>" +
-                    escapeHtml(
-                        standardText
-                    ) +
-                    "</td>" +
-
-                    "<td>" +
-                    tolerance +
-                    "</td>" +
-
-                    actualCells +
-
-                    "</tr>"
-                );
-
-            }
-        )
-        .join("");
-
-
-    const html =
-
-        '<div class="tr-print-root">' +
-
-        '<div class="tr-paper">' +
-
-
-        '<div class="tr-company">' +
-
-        '<div class="tr-company-name">' +
-        'MEKAB PACKAGING' +
-        '</div>' +
-
-        '<small>' +
-
-        'Ho: 4 Birla Shopping Center Opp. Nasik Road College, Nashik - 422101 Maharashtra (India)' +
-
-        '<br>' +
-
-        'Tel: 0253-2453372, 2453606 Tel.Fax: 2451610' +
-
-        '<br>' +
-
-        'E-mail: sales@mekabpack.com&nbsp;&nbsp; www.mekab.com' +
-
-        '</small>' +
-
-        '</div>' +
-
-
-        '<div class="tr-heading">' +
-        'TEST REPORT' +
-        '</div>' +
-
-
-        '<div class="tr-customer">' +
-
-
-        '<div>' +
-
-        '<b>Customer\'s Name :</b>' +
-
-        '<br>' +
-
-        '<b>' +
-        escapeHtml(
-            report.party
-        ) +
-        '</b>' +
-
-        '<br>' +
-
-        escapeHtml(
-            report.address || ""
-        )
-        .replace(
-            /\n/g,
-            "<br>"
-        ) +
-
-        '</div>' +
-
-
-        '<div>' +
-
-        '<b>P.O. No:</b> ' +
-
-        escapeHtml(
-            report.po
-        ) +
-
-        '&nbsp;&nbsp;' +
-
-        '<b>Date :</b> ' +
-
-        fdate(
-            report.poDate
-        ) +
-
-        '<br><br>' +
-
-
-        '<b>Bill No:</b> ' +
-
-        escapeHtml(
-            report.bill
-        ) +
-
-        '&nbsp;&nbsp;' +
-
-        '<b>Date :</b> ' +
-
-        fdate(
-            report.billDate
-        ) +
-
-        '<br><br>' +
-
-
-        'Customer Drawing :' +
-
-        '<br>' +
-
-        'Specification : ' +
-
-        escapeHtml(
-            report.specification || ""
-        ) +
-
-        '</div>' +
-
-
-        '</div>' +
-
-
-        '<div class="tr-paper-title">' +
-        'PAPER ANALYSIS -' +
-        '</div>' +
-
-
-        '<table class="tr-analysis">' +
-
-        '<tr>' +
-
-        '<th>Sr. No</th>' +
-
-        '<th>Description</th>' +
-
-        '<th>GSM</th>' +
-
-        '<th>BF</th>' +
-
-        '</tr>' +
-
-
-        '<tr>' +
-
-        '<td>1)</td>' +
-
-        '<td>Paper (Virgin Kraft)</td>' +
-
-        '<td>' +
-        escapeHtml(
-            String(
-                report.gsm
-            )
-        ) +
-        '</td>' +
-
-        '<td>' +
-        escapeHtml(
-            String(
-                report.bf
-            )
-        ) +
-        '</td>' +
-
-        '</tr>' +
-
-        '</table>' +
-
-
-        '<div class="tr-section">' +
-        'SLIP SHEET ANALYSIS - I' +
-        '</div>' +
-
-
-        '<table class="tr-main">' +
-
-        '<tr>' +
-
-        '<th rowspan="2">Description</th>' +
-
-        '<th rowspan="2">Standards</th>' +
-
-        '<th rowspan="2">Tolerance</th>' +
-
-        '<th colspan="4">Actual</th>' +
-
-        '</tr>' +
-
-
-        '<tr>' +
-
-        '<th>1</th>' +
-
-        '<th>2</th>' +
-
-        '<th>3</th>' +
-
-        '<th>4</th>' +
-
-        '</tr>' +
-
-
-        rows +
-
-        '</table>' +
-
-
-        '<div class="tr-notes">' +
-
-        '<div class="tr-note">' +
-
-        '<b>Compression Strength</b>' +
-
-        '<span>:</span>' +
-
-        '<span>As per IS &amp; IIP Standard</span>' +
-
-        '</div>' +
-
-
-        '<div class="tr-note">' +
-
-        '<b>Smell</b>' +
-
-        '<span>:</span>' +
-
-        '<span>No</span>' +
-
-        '</div>' +
-
-
-        '<div class="tr-note">' +
-
-        '<b>Adhesive</b>' +
-
-        '<span>:</span>' +
-
-        '<span>Food grade, Anti fungus &amp; Anti Bacteria.</span>' +
-
-        '</div>' +
-
-
-        '<div class="tr-note">' +
-
-        '<b>Special Not</b>' +
-
-        '<span>:</span>' +
-
-        '<span>We Randomly Check the slip Sheet in every 30 Minutes for a Lot</span>' +
-
-        '</div>' +
-
-        '</div>' +
-
-
-        '<div class="tr-footer">' +
-
-        'This is a computer generated sheet so no need of signature.' +
-
-        '</div>' +
-
-
-        '</div>' +
-
-        '</div>';
-
-
-    document
-        .getElementById(
-            "testReportPreview"
-        )
-        .innerHTML =
-        html;
-
-
-    document
-        .getElementById(
-            "testReportPreview"
-        )
-        .classList.remove(
-            "hidden"
-        );
 
 }
 
@@ -4584,7 +2775,7 @@ function printTestReport(){
     win.document.write(
         '<html>' +
         '<head>' +
-        '<title>Test Report</title>' +
+        '' +
 
         '<style>' +
 
@@ -5149,7 +3340,5 @@ else{
 
 }
 
-</script>
-
-</body>
+</script></body>
 </html>
