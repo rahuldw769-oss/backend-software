@@ -11,7 +11,7 @@ import json
 import requests
 import calendar
 import random
-
+from google import genai
 
 # ========================================================= # APP
 # ========================================================= 
