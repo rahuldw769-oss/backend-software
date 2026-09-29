@@ -84,6 +84,334 @@ TABLE = "excel_rows"
 
 
 # =========================================================
+# INDEPENDENT FILE SNAPSHOTS
+# =========================================================
+# These sources are intentionally kept separate from the existing
+# 2026-27 Supabase data.  FY/date logic below is not changed.
+# A snapshot is made from displayed Excel values and then served
+# independently, so the UI does not need to open the Excel file.
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+
+STOCK_SNAPSHOT_FILE = os.path.join(
+    DATA_DIR, "stock_snapshot.json"
+)
+
+TRANSPORT_SNAPSHOT_FILE = os.path.join(
+    DATA_DIR, "transport_snapshot.json"
+)
+
+OLD_2025_26_SNAPSHOT_FILE = os.path.join(
+    DATA_DIR, "2025-26_snapshot.json"
+)
+
+
+def _read_snapshot(path):
+
+    if not os.path.exists(path):
+        return None
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _excel_source_candidates(*names):
+
+    candidates = []
+
+    for name in names:
+        candidates.extend([
+            os.path.join(BASE_DIR, name),
+            os.path.join(DATA_DIR, name),
+        ])
+
+    return candidates
+
+
+def _find_existing_file(*names):
+
+    for path in _excel_source_candidates(*names):
+        if os.path.isfile(path):
+            return path
+
+    return None
+
+
+def _excel_value(value):
+
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+
+    if value is None:
+        return None
+
+    return value
+
+
+def _make_sheet_snapshot(path, sheet_name=None):
+    """Read displayed/cached cell values and layout metadata once.
+
+    The generated JSON is the runtime source. Excel is not opened by
+    the application after the snapshot has been created.
+    """
+
+    try:
+        from openpyxl import load_workbook
+    except Exception as exc:
+        raise RuntimeError(
+            "openpyxl is required to create an Excel snapshot: " + str(exc)
+        )
+
+    # data_only=True gives cached displayed results for formula cells.
+    wb = load_workbook(
+        path,
+        data_only=True,
+        read_only=False,
+        keep_vba=path.lower().endswith(".xlsm")
+    )
+
+    ws = wb[sheet_name] if sheet_name and sheet_name in wb.sheetnames else wb.active
+
+    cells = []
+    max_row = ws.max_row or 0
+    max_col = ws.max_column or 0
+
+    for row in ws.iter_rows():
+        row_values = []
+        for cell in row:
+            row_values.append(_excel_value(cell.value))
+        cells.append(row_values)
+
+    merges = [str(rng) for rng in ws.merged_cells.ranges]
+
+    widths = {}
+    for key, dim in ws.column_dimensions.items():
+        if dim.width is not None:
+            widths[key] = dim.width
+
+    heights = {}
+    for key, dim in ws.row_dimensions.items():
+        if dim.height is not None:
+            heights[str(key)] = dim.height
+
+    wb.close()
+
+    return {
+        "sheet": ws.title,
+        "max_row": max_row,
+        "max_column": max_col,
+        "values": cells,
+        "merged_cells": merges,
+        "column_widths": widths,
+        "row_heights": heights
+    }
+
+
+def _ensure_snapshot_dir():
+    os.makedirs(DATA_DIR, exist_ok=True)
+
+
+def create_stock_snapshot_if_needed():
+    if _read_snapshot(STOCK_SNAPSHOT_FILE) is not None:
+        return
+
+    source = _find_existing_file("STOCK.xlsx", "STOCK.xlsm", "STOCK.xls")
+    if not source:
+        return
+
+    _ensure_snapshot_dir()
+    snapshot = _make_sheet_snapshot(source)
+    snapshot["source"] = "STOCK.xlsx"
+    snapshot["mode"] = "displayed_values_snapshot"
+
+    with open(STOCK_SNAPSHOT_FILE, "w", encoding="utf-8") as f:
+        json.dump(snapshot, f, ensure_ascii=False, indent=2)
+
+
+def create_transport_snapshot_if_needed():
+    if _read_snapshot(TRANSPORT_SNAPSHOT_FILE) is not None:
+        return
+
+    source = _find_existing_file("2026-27.xlsm", "2026-27.xlsx")
+    if not source:
+        return
+
+    _ensure_snapshot_dir()
+
+    # Transport is independent. Capture the sheet containing transport
+    # headers rather than mixing it into normal order history.
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(
+            source, data_only=True, read_only=False,
+            keep_vba=source.lower().endswith(".xlsm")
+        )
+        selected = None
+        for name in wb.sheetnames:
+            ws = wb[name]
+            header_text = " ".join(
+                str(c.value or "").upper()
+                for row in ws.iter_rows(min_row=1, max_row=min(ws.max_row or 1, 10))
+                for c in row
+            )
+            if "TRANSPORT" in header_text or "VEHICLE" in header_text or "LR" in header_text:
+                selected = name
+                break
+        wb.close()
+        snapshot = _make_sheet_snapshot(source, selected)
+    except Exception:
+        return
+
+    snapshot["source"] = "2026-27.xlsm"
+    snapshot["mode"] = "independent_transport_snapshot"
+
+    with open(TRANSPORT_SNAPSHOT_FILE, "w", encoding="utf-8") as f:
+        json.dump(snapshot, f, ensure_ascii=False, indent=2)
+
+
+def create_2025_26_snapshot_if_needed():
+    if _read_snapshot(OLD_2025_26_SNAPSHOT_FILE) is not None:
+        return
+
+    source = _find_existing_file(
+        "2025-26.xlsm", "2025-26.xlsx", "2025-26.xls",
+        "2025_26.xlsm", "2025_26.xlsx"
+    )
+    if not source:
+        return
+
+    _ensure_snapshot_dir()
+    snapshot = _make_sheet_snapshot(source)
+    snapshot["source"] = os.path.basename(source)
+    snapshot["mode"] = "independent_2025_26_snapshot"
+
+    with open(OLD_2025_26_SNAPSHOT_FILE, "w", encoding="utf-8") as f:
+        json.dump(snapshot, f, ensure_ascii=False, indent=2)
+
+
+def _snapshot_to_rows(snapshot, sheet_name):
+    if not snapshot:
+        return []
+
+    values = snapshot.get("values") or []
+    if not values:
+        return []
+
+    headers = []
+    for value in values[0]:
+        headers.append(text(value))
+
+    rows = []
+    for raw in values[1:]:
+        if not any(v not in (None, "") for v in raw):
+            continue
+        padded = list(raw) + [None] * max(0, len(headers) - len(raw))
+        data = {
+            headers[i] if headers[i] else f"Column {i + 1}": padded[i]
+            for i in range(len(headers))
+        }
+        rows.append({
+            "sheet": sheet_name,
+            "headers": list(data.keys()),
+            "row": padded[:len(headers)],
+            "data": data,
+            "cancelled": False
+        })
+
+    return rows
+
+
+def rows_for_financial_year(financial_year, current_rows=None):
+    """Keep 2026-27 untouched; use independent old snapshot when present."""
+    fy = text(financial_year)
+
+    if fy == "2025-26":
+        snapshot = _read_snapshot(OLD_2025_26_SNAPSHOT_FILE)
+        if snapshot:
+            return _snapshot_to_rows(snapshot, "2025-26")
+
+    if current_rows is not None:
+        return current_rows
+
+    return get_all_rows()
+
+
+@app.get("/stock/snapshot")
+def stock_snapshot(
+    authenticated: bool = Depends(require_auth)
+):
+    create_stock_snapshot_if_needed()
+    snapshot = _read_snapshot(STOCK_SNAPSHOT_FILE)
+
+    if snapshot is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Stock snapshot not available. STOCK.xlsx source is required once to create the independent snapshot."
+        )
+
+    return snapshot
+
+
+@app.get("/transport")
+def transport_data(
+    limit: int = 1000,
+    authenticated: bool = Depends(require_auth)
+):
+    create_transport_snapshot_if_needed()
+    snapshot = _read_snapshot(TRANSPORT_SNAPSHOT_FILE)
+
+    if snapshot is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Transport snapshot not available. 2026-27.xlsm source is required once to create the independent transport snapshot."
+        )
+
+    rows = _snapshot_to_rows(snapshot, "TRANSPORT")
+    limit = max(1, min(int(limit), 5000))
+
+    return {
+        "source": "2026-27.xlsm",
+        "independent": True,
+        "sheet": snapshot.get("sheet"),
+        "headers": snapshot.get("values", [[]])[0] if snapshot.get("values") else [],
+        "count": len(rows[:limit]),
+        "data": [item["data"] for item in rows[:limit]]
+    }
+
+
+@app.get("/old-data/2025-26")
+def old_data_2025_26(
+    limit: int = 1000,
+    authenticated: bool = Depends(require_auth)
+):
+    create_2025_26_snapshot_if_needed()
+    snapshot = _read_snapshot(OLD_2025_26_SNAPSHOT_FILE)
+
+    if snapshot is None:
+        raise HTTPException(
+            status_code=404,
+            detail="2025-26 snapshot not available. The 2025-26 XLSM source is required once to create the independent snapshot."
+        )
+
+    rows = _snapshot_to_rows(snapshot, "2025-26")
+    limit = max(1, min(int(limit), 5000))
+
+    return {
+        "financial_year": "2025-26",
+        "independent": True,
+        "source": snapshot.get("source"),
+        "sheet": snapshot.get("sheet"),
+        "headers": snapshot.get("values", [[]])[0] if snapshot.get("values") else [],
+        "count": len(rows[:limit]),
+        "data": [item["data"] for item in rows[:limit]]
+    }
+
+
+# =========================================================
 # MONTHLY MATERIALS
 # =========================================================
 
@@ -1118,7 +1446,10 @@ def search(
             }
 
 
-        rows = get_all_rows()
+        rows = rows_for_financial_year(
+            financial_year,
+            get_all_rows()
+        )
 
         available_sheets = {
             text(item.get("sheet"))
@@ -1884,6 +2215,78 @@ def dashboard(
 
 
 # =========================================================
+# DASHBOARD - DISPATCH QUANTITY BY FINANCIAL YEAR
+# =========================================================
+
+@app.get("/dashboard/dispatch-quantity")
+def dashboard_dispatch_quantity(
+
+    financial_year:
+        str = "2026-27",
+
+    authenticated:
+        bool = Depends(require_auth)
+
+):
+
+    try:
+
+        rows = rows_for_financial_year(
+            financial_year,
+            get_all_rows()
+        )
+
+        fy = text(financial_year)
+
+        if fy == "2026-27":
+            target_sheets = [
+                "Dispatched Orders"
+            ]
+        else:
+            target_sheets = [
+                fy
+            ]
+
+        quantity_total = 0
+
+        for item in rows:
+
+            if text(item.get("sheet")) not in target_sheets:
+                continue
+
+            if item.get("cancelled", False) is True:
+                continue
+
+            converted = convert_database_row(item)
+
+            quantity_total += number(
+                get_row_position(
+                    converted["row"],
+                    6
+                )
+            )
+
+        return {
+
+            "financial_year":
+                fy,
+
+            "dispatch_quantity":
+                clean_number(quantity_total)
+
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+
+
+# =========================================================
 # MONTHS
 # =========================================================
 
@@ -1901,7 +2304,10 @@ def monthly_report_months(
 
     try:
 
-        rows = get_all_rows()
+        rows = rows_for_financial_year(
+            financial_year,
+            get_all_rows()
+        )
 
         available_sheets = {
             text(item.get("sheet"))
@@ -2048,7 +2454,10 @@ def daily_pcs_dispatch(
             )
 
 
-        rows = get_all_rows()
+        rows = rows_for_financial_year(
+            financial_year,
+            get_all_rows()
+        )
 
         available_sheets = {
             text(item.get("sheet"))
