@@ -152,13 +152,78 @@ def _excel_value(value):
     return value
 
 
+def _normalise_sheet_name(name):
+    return " ".join(str(name or "").strip().upper().split())
+
+
+def _find_sheet_name(wb, wanted_name):
+    """Find an Excel sheet by name without changing its original casing."""
+    wanted = _normalise_sheet_name(wanted_name)
+    for name in wb.sheetnames:
+        if _normalise_sheet_name(name) == wanted:
+            return name
+    return None
+
+
+def _style_snapshot(cell):
+    """Return only presentation information needed to draw Excel-like cells."""
+    def rgb(value):
+        if not value:
+            return None
+        return getattr(value, "rgb", None) or getattr(value, "indexed", None) or getattr(value, "theme", None)
+
+    font = cell.font
+    fill = cell.fill
+    alignment = cell.alignment
+    border = cell.border
+
+    def side_data(side):
+        return {
+            "style": side.style,
+            "color": rgb(side.color),
+        }
+
+    return {
+        "font": {
+            "name": font.name,
+            "size": font.sz,
+            "bold": bool(font.bold),
+            "italic": bool(font.italic),
+            "underline": font.underline,
+            "strike": bool(font.strike),
+            "color": rgb(font.color),
+        },
+        "fill": {
+            "type": fill.fill_type,
+            "fg": rgb(fill.fgColor),
+            "bg": rgb(fill.bgColor),
+        },
+        "alignment": {
+            "horizontal": alignment.horizontal,
+            "vertical": alignment.vertical,
+            "wrap_text": bool(alignment.wrap_text),
+            "text_rotation": alignment.text_rotation,
+            "shrink_to_fit": bool(alignment.shrink_to_fit),
+            "indent": alignment.indent,
+        },
+        "border": {
+            "left": side_data(border.left),
+            "right": side_data(border.right),
+            "top": side_data(border.top),
+            "bottom": side_data(border.bottom),
+        },
+        "number_format": cell.number_format,
+    }
+
+
 def _make_sheet_snapshot(path, sheet_name=None):
-    """Read displayed/cached cell values and layout metadata once.
+    """Create a static, Excel-like snapshot of one sheet.
 
-    The generated JSON is the runtime source. Excel is not opened by
-    the application after the snapshot has been created.
+    Important: values are read with data_only=True. Therefore formula cells
+    contribute their cached/displayed Excel values, not formulas that the
+    backend tries to recalculate. The JSON snapshot becomes the runtime
+    source; Excel is not opened during normal API reads.
     """
-
     try:
         from openpyxl import load_workbook
     except Exception as exc:
@@ -166,7 +231,6 @@ def _make_sheet_snapshot(path, sheet_name=None):
             "openpyxl is required to create an Excel snapshot: " + str(exc)
         )
 
-    # data_only=True gives cached displayed results for formula cells.
     wb = load_workbook(
         path,
         data_only=True,
@@ -174,9 +238,11 @@ def _make_sheet_snapshot(path, sheet_name=None):
         keep_vba=path.lower().endswith(".xlsm")
     )
 
-    ws = wb[sheet_name] if sheet_name and sheet_name in wb.sheetnames else wb.active
+    actual_sheet = _find_sheet_name(wb, sheet_name) if sheet_name else None
+    ws = wb[actual_sheet] if actual_sheet else wb.active
 
     cells = []
+    styles = {}
     max_row = ws.max_row or 0
     max_col = ws.max_column or 0
 
@@ -184,19 +250,41 @@ def _make_sheet_snapshot(path, sheet_name=None):
         row_values = []
         for cell in row:
             row_values.append(_excel_value(cell.value))
+            # Keep presentation data for non-empty/styled cells only so the
+            # snapshot stays reasonably small even for large sheets.
+            if cell.value is not None or cell.has_style:
+                styles[cell.coordinate] = _style_snapshot(cell)
         cells.append(row_values)
 
     merges = [str(rng) for rng in ws.merged_cells.ranges]
 
     widths = {}
+    hidden_columns = []
     for key, dim in ws.column_dimensions.items():
         if dim.width is not None:
             widths[key] = dim.width
+        if dim.hidden:
+            hidden_columns.append(key)
 
     heights = {}
+    hidden_rows = []
     for key, dim in ws.row_dimensions.items():
         if dim.height is not None:
             heights[str(key)] = dim.height
+        if dim.hidden:
+            hidden_rows.append(str(key))
+
+    freeze = ws.freeze_panes
+    freeze = str(freeze) if freeze else None
+
+    sheet_view = ws.sheet_view
+    tab_color = None
+    if ws.sheet_properties.tabColor:
+        tab_color = (
+            getattr(ws.sheet_properties.tabColor, "rgb", None)
+            or getattr(ws.sheet_properties.tabColor, "indexed", None)
+            or getattr(ws.sheet_properties.tabColor, "theme", None)
+        )
 
     wb.close()
 
@@ -205,9 +293,16 @@ def _make_sheet_snapshot(path, sheet_name=None):
         "max_row": max_row,
         "max_column": max_col,
         "values": cells,
+        "styles": styles,
         "merged_cells": merges,
         "column_widths": widths,
-        "row_heights": heights
+        "row_heights": heights,
+        "hidden_columns": hidden_columns,
+        "hidden_rows": hidden_rows,
+        "freeze_panes": freeze,
+        "show_grid_lines": bool(sheet_view.showGridLines),
+        "show_row_col_headers": bool(sheet_view.showRowColHeaders),
+        "tab_color": tab_color,
     }
 
 
@@ -215,82 +310,70 @@ def _ensure_snapshot_dir():
     os.makedirs(DATA_DIR, exist_ok=True)
 
 
-def create_stock_snapshot_if_needed():
-    if _read_snapshot(STOCK_SNAPSHOT_FILE) is not None:
+def _source_2026_27_workbook():
+    """Single source for STOCK, TRANSPORT and 2025-26 sheets."""
+    return _find_existing_file("2026-27.xlsm", "2026-27.xlsx")
+
+
+def _write_sheet_snapshot(snapshot_file, source, sheet_name, mode):
+    if _read_snapshot(snapshot_file) is not None:
         return
 
-    source = _find_existing_file("STOCK.xlsx", "STOCK.xlsm", "STOCK.xls")
     if not source:
         return
 
     _ensure_snapshot_dir()
-    snapshot = _make_sheet_snapshot(source)
-    snapshot["source"] = "STOCK.xlsx"
-    snapshot["mode"] = "displayed_values_snapshot"
-
-    with open(STOCK_SNAPSHOT_FILE, "w", encoding="utf-8") as f:
-        json.dump(snapshot, f, ensure_ascii=False, indent=2)
-
-
-def create_transport_snapshot_if_needed():
-    if _read_snapshot(TRANSPORT_SNAPSHOT_FILE) is not None:
-        return
-
-    source = _find_existing_file("2026-27.xlsm", "2026-27.xlsx")
-    if not source:
-        return
-
-    _ensure_snapshot_dir()
-
-    # Transport is independent. Capture the sheet containing transport
-    # headers rather than mixing it into normal order history.
     try:
-        from openpyxl import load_workbook
-        wb = load_workbook(
-            source, data_only=True, read_only=False,
-            keep_vba=source.lower().endswith(".xlsm")
-        )
-        selected = None
-        for name in wb.sheetnames:
-            ws = wb[name]
-            header_text = " ".join(
-                str(c.value or "").upper()
-                for row in ws.iter_rows(min_row=1, max_row=min(ws.max_row or 1, 10))
-                for c in row
-            )
-            if "TRANSPORT" in header_text or "VEHICLE" in header_text or "LR" in header_text:
-                selected = name
-                break
-        wb.close()
-        snapshot = _make_sheet_snapshot(source, selected)
+        snapshot = _make_sheet_snapshot(source, sheet_name)
     except Exception:
         return
 
-    snapshot["source"] = "2026-27.xlsm"
-    snapshot["mode"] = "independent_transport_snapshot"
+    # Never silently fall back to another sheet: the requested sheet is the
+    # source of truth for this independent section.
+    if _normalise_sheet_name(snapshot.get("sheet")) != _normalise_sheet_name(sheet_name):
+        return
 
-    with open(TRANSPORT_SNAPSHOT_FILE, "w", encoding="utf-8") as f:
+    snapshot["source"] = os.path.basename(source)
+    snapshot["source_sheet"] = snapshot.get("sheet")
+    snapshot["mode"] = mode
+    snapshot["runtime_source"] = "static_snapshot"
+    snapshot["values_are_cached_display_values"] = True
+
+    with open(snapshot_file, "w", encoding="utf-8") as f:
         json.dump(snapshot, f, ensure_ascii=False, indent=2)
+
+
+def create_stock_snapshot_if_needed():
+    # STOCK is a sheet INSIDE 2026-27.xlsm. No STOCK.xlsx dependency.
+    source = _source_2026_27_workbook()
+    _write_sheet_snapshot(
+        STOCK_SNAPSHOT_FILE,
+        source,
+        "STOCK",
+        "graphical_static_stock_snapshot"
+    )
+
+
+def create_transport_snapshot_if_needed():
+    # TRANSPORT is a separate independent sheet INSIDE 2026-27.xlsm.
+    source = _source_2026_27_workbook()
+    _write_sheet_snapshot(
+        TRANSPORT_SNAPSHOT_FILE,
+        source,
+        "TRANSPORT",
+        "independent_transport_snapshot"
+    )
 
 
 def create_2025_26_snapshot_if_needed():
-    if _read_snapshot(OLD_2025_26_SNAPSHOT_FILE) is not None:
-        return
-
-    source = _find_existing_file(
-        "2025-26.xlsm", "2025-26.xlsx", "2025-26.xls",
-        "2025_26.xlsm", "2025_26.xlsx"
+    # 2025-26 is also a sheet INSIDE 2026-27.xlsm, not another workbook.
+    source = _source_2026_27_workbook()
+    _write_sheet_snapshot(
+        OLD_2025_26_SNAPSHOT_FILE,
+        source,
+        "2025-26",
+        "independent_2025_26_snapshot"
     )
-    if not source:
-        return
-
-    _ensure_snapshot_dir()
-    snapshot = _make_sheet_snapshot(source)
-    snapshot["source"] = os.path.basename(source)
-    snapshot["mode"] = "independent_2025_26_snapshot"
-
-    with open(OLD_2025_26_SNAPSHOT_FILE, "w", encoding="utf-8") as f:
-        json.dump(snapshot, f, ensure_ascii=False, indent=2)
 
 
 def _snapshot_to_rows(snapshot, sheet_name):
@@ -326,10 +409,11 @@ def _snapshot_to_rows(snapshot, sheet_name):
 
 
 def rows_for_financial_year(financial_year, current_rows=None):
-    """Keep 2026-27 untouched; use independent old snapshot when present."""
+    """Keep 2026-27 untouched; use the independent 2025-26 sheet snapshot."""
     fy = text(financial_year)
 
     if fy == "2025-26":
+        create_2025_26_snapshot_if_needed()
         snapshot = _read_snapshot(OLD_2025_26_SNAPSHOT_FILE)
         if snapshot:
             return _snapshot_to_rows(snapshot, "2025-26")
@@ -350,7 +434,7 @@ def stock_snapshot(
     if snapshot is None:
         raise HTTPException(
             status_code=404,
-            detail="Stock snapshot not available. STOCK.xlsx source is required once to create the independent snapshot."
+            detail="STOCK sheet snapshot not available. Put 2026-27.xlsm beside server.py so the STOCK sheet can be captured."
         )
 
     return snapshot
@@ -367,7 +451,7 @@ def transport_data(
     if snapshot is None:
         raise HTTPException(
             status_code=404,
-            detail="Transport snapshot not available. 2026-27.xlsm source is required once to create the independent transport snapshot."
+            detail="TRANSPORT sheet snapshot not available in 2026-27.xlsm."
         )
 
     rows = _snapshot_to_rows(snapshot, "TRANSPORT")
@@ -378,6 +462,7 @@ def transport_data(
         "independent": True,
         "sheet": snapshot.get("sheet"),
         "headers": snapshot.get("values", [[]])[0] if snapshot.get("values") else [],
+        "snapshot": snapshot,
         "count": len(rows[:limit]),
         "data": [item["data"] for item in rows[:limit]]
     }
@@ -394,7 +479,7 @@ def old_data_2025_26(
     if snapshot is None:
         raise HTTPException(
             status_code=404,
-            detail="2025-26 snapshot not available. The 2025-26 XLSM source is required once to create the independent snapshot."
+            detail="2025-26 sheet snapshot not available in 2026-27.xlsm."
         )
 
     rows = _snapshot_to_rows(snapshot, "2025-26")
@@ -405,6 +490,7 @@ def old_data_2025_26(
         "independent": True,
         "source": snapshot.get("source"),
         "sheet": snapshot.get("sheet"),
+        "snapshot": snapshot,
         "headers": snapshot.get("values", [[]])[0] if snapshot.get("values") else [],
         "count": len(rows[:limit]),
         "data": [item["data"] for item in rows[:limit]]
