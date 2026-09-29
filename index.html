@@ -857,6 +857,232 @@ select:focus{
 }
 
 /* =========================================================
+   SNAPSHOT PAGES
+========================================================= */
+.snapshot-page{
+    display:none;
+    animation:pageIn .42s ease both;
+}
+
+.snapshot-card{
+    background:white;
+    padding:20px;
+    border:1px solid var(--line);
+    border-radius:18px;
+    box-shadow:var(--shadow-sm);
+}
+
+.snapshot-toolbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    margin-bottom:10px;
+}
+
+.snapshot-subtitle{
+    margin-top:3px;
+    color:#65676b;
+    font-size:12px;
+}
+
+.snapshot-sheet-wrap{
+    width:100%;
+    overflow:auto;
+    border:1px solid #e2e7ee;
+    border-radius:10px;
+    background:#fff;
+}
+
+.snapshot-sheet-table{
+    border-collapse:collapse;
+    width:max-content;
+    min-width:100%;
+}
+
+.snapshot-sheet-table td{
+    border:1px solid #d9dee6;
+    padding:5px 7px;
+    min-width:70px;
+    white-space:pre-wrap;
+}
+
+.snapshot-table-wrap{
+    width:100%;
+    overflow:auto;
+    border:1px solid #e2e7ee;
+    border-radius:10px;
+}
+
+.snapshot-data-table{
+    border-collapse:collapse;
+    min-width:100%;
+}
+
+.snapshot-data-table th,
+.snapshot-data-table td{
+    border:1px solid #e2e7ee;
+    padding:8px 9px;
+    font-size:12px;
+    white-space:nowrap;
+    text-align:left;
+}
+
+.snapshot-data-table th{
+    background:#f5f7fa;
+    font-weight:700;
+    position:sticky;
+    top:0;
+    z-index:1;
+}
+
+function escapeHtml(value){
+    return String(value ?? "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+}
+
+/* =========================================================
+   STOCK / TRANSPORT SNAPSHOTS
+========================================================= */
+
+function snapshotColor(value){
+    if(!value) return "";
+    const raw = String(value);
+    if(/^[0-9A-F]{6}$/i.test(raw)) return "#" + raw;
+    if(/^[0-9A-F]{8}$/i.test(raw)) return "#" + raw.slice(2);
+    return "";
+}
+
+function applySnapshotStyle(cell, style){
+    if(!style) return;
+    const font = style.font || {};
+    const fill = style.fill || {};
+    const align = style.alignment || {};
+    const border = style.border || {};
+
+    if(font.name) cell.style.fontFamily = font.name;
+    if(font.size) cell.style.fontSize = font.size + "pt";
+    if(font.bold) cell.style.fontWeight = "700";
+    if(font.italic) cell.style.fontStyle = "italic";
+    if(font.underline) cell.style.textDecoration = "underline";
+    if(font.strike) cell.style.textDecoration = "line-through";
+    const fc = snapshotColor(font.color);
+    if(fc) cell.style.color = fc;
+
+    const bg = snapshotColor(fill.fg);
+    if(bg && fill.type) cell.style.backgroundColor = bg;
+
+    if(align.horizontal) cell.style.textAlign = align.horizontal;
+    if(align.vertical) cell.style.verticalAlign = align.vertical;
+    if(align.wrap_text) cell.style.whiteSpace = "pre-wrap";
+    if(align.shrink_to_fit) cell.style.fontSize = "smaller";
+    if(align.indent) cell.style.paddingLeft = (7 + Number(align.indent) * 8) + "px";
+
+    Object.entries(border).forEach(([side, data]) => {
+        if(!data || !data.style) return;
+        const color = snapshotColor(data.color) || "#808080";
+        const cssSide = side === "left" ? "Left" : side === "right" ? "Right" : side === "top" ? "Top" : "Bottom";
+        cell.style["border" + cssSide] = "1px " + (data.style === "double" ? "double" : "solid") + " " + color;
+    });
+}
+
+function renderStockSnapshot(data){
+    const wrap = document.getElementById("stockSheetWrap");
+    wrap.innerHTML = "";
+    const values = data.values || [];
+    const styles = data.styles || {};
+    const table = document.createElement("table");
+    table.className = "snapshot-sheet-table";
+
+    const colgroup = document.createElement("colgroup");
+    for(let c=0;c<(data.max_column || (values[0]||[]).length);c++){
+        const col = document.createElement("col");
+        let width = 70;
+        const letter = (n => { let out=""; while(n>0){ let r=(n-1)%26; out=String.fromCharCode(65+r)+out; n=Math.floor((n-1)/26); } return out; })(c+1);
+        if(data.column_widths && data.column_widths[letter]) width = Math.max(35, Number(data.column_widths[letter]) * 7);
+        col.style.width = width + "px";
+        colgroup.appendChild(col);
+    }
+    table.appendChild(colgroup);
+
+    const mergeMap = {};
+    (data.merged_cells || []).forEach(range => {
+        const m = String(range).match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
+        if(!m) return;
+        const colNum = x => { let n=0; for(const ch of x) n=n*26+ch.charCodeAt(0)-64; return n; };
+        const c1=colNum(m[1]), r1=Number(m[2]), c2=colNum(m[3]), r2=Number(m[4]);
+        mergeMap[r1+":"+c1] = {rowspan:r2-r1+1,colspan:c2-c1+1};
+        for(let r=r1;r<=r2;r++) for(let c=c1;c<=c2;c++) if(!(r===r1&&c===c1)) mergeMap[r+":"+c] = {skip:true};
+    });
+
+    values.forEach((row, rIdx) => {
+        const tr=document.createElement("tr");
+        const height=data.row_heights && data.row_heights[String(rIdx+1)];
+        if(height) tr.style.height=height+"pt";
+        (row || []).forEach((value,cIdx)=>{
+            const key=(rIdx+1)+":"+(cIdx+1);
+            const merge=mergeMap[key];
+            if(merge && merge.skip) return;
+            const td=document.createElement("td");
+            if(merge){ td.rowSpan=merge.rowspan; td.colSpan=merge.colspan; }
+            td.textContent = value == null ? "" : String(value);
+            applySnapshotStyle(td, styles[String.fromCharCode(65 + (cIdx%26)) + (rIdx+1)]);
+            // Correct multi-letter column lookup.
+            let n=cIdx+1, letters="";
+            while(n>0){const q=(n-1)%26; letters=String.fromCharCode(65+q)+letters; n=Math.floor((n-1)/26);}
+            applySnapshotStyle(td, styles[letters+(rIdx+1)]);
+            tr.appendChild(td);
+        });
+        table.appendChild(tr);
+    });
+    wrap.appendChild(table);
+}
+
+async function loadStock(){
+    const status=document.getElementById("stockStatus");
+    status.textContent="Stock load ho raha hai...";
+    status.className="status";
+    try{
+        const data=await apiFetch(API_URL+"/stock/snapshot");
+        renderStockSnapshot(data);
+        document.getElementById("stockSourceLabel").textContent=(data.source || "2026-27.xlsm")+" • "+(data.source_sheet || "STOCK");
+        status.textContent="Stock loaded.";
+        status.className="status success";
+    }catch(error){
+        status.textContent=error.message;
+        status.className="status error";
+    }
+}
+
+async function loadTransport(){
+    const status=document.getElementById("transportStatus");
+    const wrap=document.getElementById("transportTableWrap");
+    status.textContent="Transport load ho raha hai...";
+    status.className="status";
+    try{
+        const data=await apiFetch(API_URL+"/transport?limit=5000");
+        const headers=data.headers || [];
+        const rows=data.data || [];
+        let html='<table class="snapshot-data-table"><thead><tr>';
+        headers.forEach(h=>html+='<th>'+escapeHtml(h==null?"":h)+'</th>');
+        html+='</tr></thead><tbody>';
+        rows.forEach(row=>{ html+='<tr>'; headers.forEach(h=>html+='<td>'+escapeHtml(row && row[h] != null ? row[h] : "")+'</td>'); html+='</tr>'; });
+        html+='</tbody></table>';
+        wrap.innerHTML=html;
+        document.getElementById("transportSourceLabel").textContent=(data.source || "2026-27.xlsm")+" • "+(data.sheet || "TRANSPORT");
+        status.textContent=(data.count || rows.length)+" rows loaded.";
+        status.className="status success";
+    }catch(error){
+        status.textContent=error.message;
+        status.className="status error";
+    }
+}
+
+/* =========================================================
    MONTHLY REPORT
 ========================================================= */
 
@@ -1510,8 +1736,8 @@ select:focus{
     .sidebar-nav{
         width:100%;
         display:grid;
-        grid-template-columns:repeat(5,1fr);
-        gap:4px;
+        grid-template-columns:repeat(7,1fr);
+        gap:3px;
     }
 
     .header-button{
@@ -1842,6 +2068,30 @@ select:focus{
 
             <button
                 class="header-button"
+                id="stockButton"
+                onclick="showStock()"
+            >
+                <span class="nav-icon">▥</span>
+                <span class="nav-text">
+                    Stock
+                </span>
+            </button>
+
+
+            <button
+                class="header-button"
+                id="transportButton"
+                onclick="showTransport()"
+            >
+                <span class="nav-icon">▱</span>
+                <span class="nav-text">
+                    Transport
+                </span>
+            </button>
+
+
+            <button
+                class="header-button"
                 id="testReportButton"
                 onclick="showTestReport()"
             >
@@ -2037,8 +2287,19 @@ select:focus{
 
                         <div class="stat-card">
 
-                            <div class="stat-label">
-                                Dispatch Quantity
+                            <div
+                                class="stat-label"
+                                style="display:flex;align-items:center;justify-content:space-between;gap:6px;"
+                            >
+                                <span>Dispatch Quantity</span>
+
+                                <select
+                                    id="dashboardDispatchFY"
+                                    onchange="loadDashboardDispatchQuantity()"
+                                    style="font-size:10px;padding:2px 4px;height:24px;width:72px;border-radius:5px;border:1px solid #ccc;background:#fff;"
+                                >
+                                    <option value="2026-27">2026-27</option>
+                                </select>
                             </div>
 
                             <div
@@ -2390,6 +2651,50 @@ select:focus{
 
                 </div>
 
+            </div>
+
+
+            <!-- =================================================
+                 STOCK
+            ================================================= -->
+
+            <div
+                class="snapshot-page"
+                id="stockPage"
+            >
+                <div class="snapshot-card">
+                    <div class="snapshot-toolbar">
+                        <div>
+                            <div class="dashboard-card-title">Stock</div>
+                            <div class="snapshot-subtitle" id="stockSourceLabel">2026-27.xlsm • STOCK</div>
+                        </div>
+                        <button class="app-button" onclick="loadStock()">REFRESH</button>
+                    </div>
+                    <div class="status" id="stockStatus"></div>
+                    <div class="snapshot-sheet-wrap" id="stockSheetWrap"></div>
+                </div>
+            </div>
+
+
+            <!-- =================================================
+                 TRANSPORT
+            ================================================= -->
+
+            <div
+                class="snapshot-page"
+                id="transportPage"
+            >
+                <div class="snapshot-card">
+                    <div class="snapshot-toolbar">
+                        <div>
+                            <div class="dashboard-card-title">Transport</div>
+                            <div class="snapshot-subtitle" id="transportSourceLabel">2026-27.xlsm • TRANSPORT</div>
+                        </div>
+                        <button class="app-button" onclick="loadTransport()">REFRESH</button>
+                    </div>
+                    <div class="status" id="transportStatus"></div>
+                    <div class="snapshot-table-wrap" id="transportTableWrap"></div>
+                </div>
             </div>
 
 
@@ -3130,6 +3435,14 @@ function hideAllPages(){
         .getElementById("testReportPage")
         .style.display = "none";
 
+    document
+        .getElementById("stockPage")
+        .style.display = "none";
+
+    document
+        .getElementById("transportPage")
+        .style.display = "none";
+
 
     document
         .getElementById("dashboardButton")
@@ -3145,6 +3458,14 @@ function hideAllPages(){
 
     document
         .getElementById("testReportButton")
+        .classList.remove("active");
+
+    document
+        .getElementById("stockButton")
+        .classList.remove("active");
+
+    document
+        .getElementById("transportButton")
         .classList.remove("active");
 
 }
@@ -3201,6 +3522,28 @@ function showMonthlyReport(){
 }
 
 
+function showStock(){
+
+    hideAllPages();
+
+    document.getElementById("stockPage").style.display = "block";
+    document.getElementById("stockButton").classList.add("active");
+
+    loadStock();
+}
+
+
+function showTransport(){
+
+    hideAllPages();
+
+    document.getElementById("transportPage").style.display = "block";
+    document.getElementById("transportButton").classList.add("active");
+
+    loadTransport();
+}
+
+
 function showTestReport(){
 
     hideAllPages();
@@ -3221,6 +3564,42 @@ function showTestReport(){
 /* =========================================================
    DASHBOARD
 ========================================================= */
+
+async function loadDashboardDispatchQuantity(){
+
+    const financialYear =
+        document.getElementById(
+            "dashboardDispatchFY"
+        )?.value || "2026-27";
+
+    try{
+
+        const data =
+            await apiFetch(
+                API_URL +
+                "/dashboard/dispatch-quantity?financial_year=" +
+                encodeURIComponent(financialYear)
+            );
+
+        document
+            .getElementById("totalDispatchQty")
+            .textContent =
+            formatNumber(
+                data.dispatch_quantity
+            );
+
+    }
+    catch(error){
+
+        console.error(
+            "DASHBOARD DISPATCH QUANTITY ERROR:",
+            error
+        );
+
+    }
+
+}
+
 
 async function loadDashboard(){
 
@@ -3301,6 +3680,9 @@ async function loadDashboard(){
             formatNumber(
                 data.dispatch?.total_quantity
             );
+
+
+        await loadDashboardDispatchQuantity();
 
 
         document
@@ -6085,7 +6467,8 @@ async function loadFinancialYears(){
 
     const selects = [
         document.getElementById("searchFY"),
-        document.getElementById("reportFY")
+        document.getElementById("reportFY"),
+        document.getElementById("dashboardDispatchFY")
     ];
 
     try{
@@ -6207,10 +6590,7 @@ async function loadSheets(){
         let visibleSheets = sheets;
 
         if(financialYear === "2025-26"){
-            visibleSheets =
-                sheets.filter(
-                    sheet => sheet === "2025-26"
-                );
+            visibleSheets = ["2025-26"];
         }
         else if(financialYear === "2026-27"){
             visibleSheets =
