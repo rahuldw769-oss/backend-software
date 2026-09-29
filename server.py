@@ -1029,6 +1029,47 @@ def get_sheet(
 
 
 # =========================================================
+# FINANCIAL YEAR HELPERS (SEARCH + MONTHLY REPORT ONLY)
+# =========================================================
+
+FINANCIAL_YEARS = [
+    "2025-26",
+    "2026-27",
+    "2027-28",
+    "2028-29"
+]
+
+
+def financial_year_sheets(financial_year, available_sheets=None):
+
+    fy = text(financial_year)
+
+    if fy == "2026-27":
+        return [
+            "ORDERS",
+            "Dispatched Orders",
+            "Holded Orders"
+        ]
+
+    if available_sheets is not None and fy in available_sheets:
+        return [fy]
+
+    return [fy]
+
+
+@app.get("/financial-years")
+def financial_years(
+    authenticated:
+        bool = Depends(require_auth)
+):
+
+    return {
+        "financial_years":
+            FINANCIAL_YEARS
+    }
+
+
+# =========================================================
 # SEARCH
 # =========================================================
 
@@ -1039,6 +1080,9 @@ def search(
 
     sheet:
         str = "ALL SHEETS",
+
+    financial_year:
+        str = "2026-27",
 
     authenticated:
         bool = Depends(require_auth)
@@ -1062,6 +1106,9 @@ def search(
                 "sheet":
                     sheet,
 
+                "financial_year":
+                    financial_year,
+
                 "count":
                     0,
 
@@ -1073,6 +1120,16 @@ def search(
 
         rows = get_all_rows()
 
+        available_sheets = {
+            text(item.get("sheet"))
+            for item in rows
+            if text(item.get("sheet"))
+        }
+
+        target_sheets = financial_year_sheets(
+            financial_year,
+            available_sheets
+        )
 
         results = []
 
@@ -1084,6 +1141,10 @@ def search(
                         "sheet"
                     )
                 )
+
+
+            if sheet_name not in target_sheets:
+                continue
 
 
             if (
@@ -1153,6 +1214,9 @@ def search(
 
             "sheet":
                 sheet,
+
+            "financial_year":
+                financial_year,
 
             "count":
                 len(results),
@@ -1827,6 +1891,10 @@ def dashboard(
     "/monthly-report/months"
 )
 def monthly_report_months(
+
+    financial_year:
+        str = "2026-27",
+
     authenticated:
         bool = Depends(require_auth)
 ):
@@ -1835,21 +1903,25 @@ def monthly_report_months(
 
         rows = get_all_rows()
 
+        available_sheets = {
+            text(item.get("sheet"))
+            for item in rows
+            if text(item.get("sheet"))
+        }
 
+        target_sheets = financial_year_sheets(
+            financial_year,
+            available_sheets
+        )
+
+        # Monthly dispatch data comes from the same positional
+        # columns in the old 2025-26 sheet and current dispatch sheet.
         months = set()
 
 
         for item in rows:
 
-            if (
-                text(
-                    item.get(
-                        "sheet"
-                    )
-                )
-                != "Dispatched Orders"
-            ):
-
+            if text(item.get("sheet")) not in target_sheets:
                 continue
 
 
@@ -1950,6 +2022,9 @@ def daily_pcs_dispatch(
 
     month: int,
 
+    financial_year:
+        str = "2026-27",
+
     authenticated:
         bool = Depends(require_auth)
 
@@ -1974,6 +2049,17 @@ def daily_pcs_dispatch(
 
 
         rows = get_all_rows()
+
+        available_sheets = {
+            text(item.get("sheet"))
+            for item in rows
+            if text(item.get("sheet"))
+        }
+
+        target_sheets = financial_year_sheets(
+            financial_year,
+            available_sheets
+        )
 
 
         days_in_month = calendar.monthrange(
@@ -2015,14 +2101,9 @@ def daily_pcs_dispatch(
 
         for item in rows:
 
-            if (
-                text(
-                    item.get(
-                        "sheet"
-                    )
-                )
-                != "Dispatched Orders"
-            ):
+            if text(item.get("sheet")) not in target_sheets:
+
+                continue
 
                 continue
 
