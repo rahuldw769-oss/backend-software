@@ -278,51 +278,56 @@ def date_only(value):
     if value is None:
         return None
 
-    if isinstance(
-        value,
-        datetime
-    ):
+    if isinstance(value, datetime):
         return value.date()
 
-    if isinstance(
-        value,
-        date
-    ):
+    if isinstance(value, date):
         return value
 
-    value = str(
-        value
-    ).strip()
+    value = str(value).strip()
 
+    if not value:
+        return None
+
+    # Extra spaces remove
+    value = " ".join(value.split())
+
+    # ISO datetime:
+    # 2026-09-28T10:30:00
+    if "T" in value:
+        value = value.split("T", 1)[0].strip()
+
+    # Normal datetime:
+    # 2026-09-28 10:30:00
+    if " " in value:
+        value = value.split(" ", 1)[0].strip()
+
+    # Remove timezone if present
+    if "+" in value:
+        value = value.split("+", 1)[0].strip()
+
+    # Remove trailing Z
+    if value.endswith("Z"):
+        value = value[:-1].strip()
 
     formats = (
-
-        "%Y-%m-%d",
-
-        "%d-%m-%Y",
-
-        "%d/%m/%Y",
-
-        "%m/%d/%Y",
-
-        "%d.%m.%Y",
-
+        "%Y-%m-%d",   # 2026-09-28
+        "%Y/%m/%d",   # 2026/09/28
+        "%d-%m-%Y",   # 28-09-2026
+        "%d/%m/%Y",   # 28/09/2026
+        "%d.%m.%Y",   # 28.09.2026
+        "%Y.%m.%d",   # 2026.09.28
     )
 
-
     for fmt in formats:
-
         try:
-
             return datetime.strptime(
                 value,
                 fmt
             ).date()
 
-        except Exception:
-
+        except ValueError:
             pass
-
 
     return None
 
