@@ -1212,73 +1212,56 @@ async function loadTransport(){
 }
 
 .destination-list{
+    display:block;
     margin:8px 0 10px 18px;
     border-left:2px solid #e4e6eb;
     padding:0 8px 0 14px;
     width:calc(100% - 26px);
-    box-sizing:border-box;
-}
-
-.destination-header,
-.destination-row{
-    display:flex !important;
-    flex-direction:row;
-    justify-content:space-between;
-    align-items:center;
-    gap:32px;
-    width:100%;
-    box-sizing:border-box;
-}
-
-.destination-header{
-    padding:8px 12px;
-    background:#f4f6fa;
-    border-radius:7px;
-    color:#667085;
-    font-size:11px;
-    font-weight:800;
-    text-transform:uppercase;
-    letter-spacing:.04em;
-}
-
-.destination-row{
-    padding:10px 12px;
-    border-bottom:1px solid #edf0f4;
-    font-size:13px;
-    min-height:38px;
-}
-
-.destination-name{
-    color:#475467;
-    display:block;
-    flex:1 1 auto;
     min-width:0;
-    overflow-wrap:anywhere;
+    box-sizing:border-box;
 }
 
-.destination-qty{
-    display:block;
-    flex:0 0 130px;
-    width:130px;
-    min-width:130px;
+/* Explicit two-column table prevents Size and Quantity from running together. */
+.party-size-table{
+    width:100%;
+    table-layout:fixed;
+    border-collapse:collapse;
+    font-size:12px;
+    line-height:1.4;
+}
+.party-size-table th,
+.party-size-table td{
+    padding:7px 10px;
+    border-bottom:1px solid #edf0f4;
+    vertical-align:top;
+}
+.party-size-table th{
+    background:#f4f6fa;
+    color:#667085;
+    font-size:10px;
+    font-weight:800;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+}
+.party-size-table th:first-child,
+.party-size-table td:first-child{
+    width:72%;
+    text-align:left;
+    overflow-wrap:anywhere;
+    padding-right:18px;
+}
+.party-size-table th:last-child,
+.party-size-table td:last-child{
+    width:28%;
     text-align:right;
+    white-space:nowrap;
     font-weight:700;
     font-variant-numeric:tabular-nums;
-    padding-left:16px;
     border-left:1px solid #e6eaf0;
-    box-sizing:border-box;
+    padding-left:14px;
 }
-
-@media(max-width:480px){
-    .destination-header,
-    .destination-row{
-        gap:18px;
-    }
-    .destination-qty{
-        flex-basis:105px;
-        width:105px;
-        min-width:105px;
-    }
+.party-size-table tbody tr:last-child td{
+    border-bottom:0;
 }
 
 /* =========================================================
@@ -4058,98 +4041,54 @@ function renderPartyWise(data){
                     );
 
 
-                    const sizeList =
-                        document.createElement(
-                            "div"
-                        );
+                    const sizeList = document.createElement("div");
+                    sizeList.className = "destination-list";
 
-                    sizeList.className =
-                        "destination-list";
+                    const sizeTable = document.createElement("table");
+                    sizeTable.className = "party-size-table";
 
-                    const sizeHeader =
-                        document.createElement("div");
-                    sizeHeader.className = "destination-header";
-                    sizeHeader.innerHTML =
-                        "<span>Size</span><span style=\"text-align:right\">Quantity</span>";
-                    sizeList.appendChild(sizeHeader);
+                    const sizeHead = document.createElement("thead");
+                    const sizeHeadRow = document.createElement("tr");
+                    const sizeHeadName = document.createElement("th");
+                    sizeHeadName.textContent = "Size";
+                    const sizeHeadQty = document.createElement("th");
+                    sizeHeadQty.textContent = "Quantity";
+                    sizeHeadRow.appendChild(sizeHeadName);
+                    sizeHeadRow.appendChild(sizeHeadQty);
+                    sizeHead.appendChild(sizeHeadRow);
+                    sizeTable.appendChild(sizeHead);
 
-                    const sizes =
-                        destination.sizes || [];
-
+                    const sizeBody = document.createElement("tbody");
+                    const sizes = destination.sizes || [];
 
                     if(!sizes.length){
+                        const emptyRow = document.createElement("tr");
+                        const emptyName = document.createElement("td");
+                        emptyName.textContent = "No size";
+                        const emptyQty = document.createElement("td");
+                        emptyQty.textContent = "0";
+                        emptyRow.appendChild(emptyName);
+                        emptyRow.appendChild(emptyQty);
+                        sizeBody.appendChild(emptyRow);
+                    } else {
+                        sizes.forEach(size => {
+                            const sizeRow = document.createElement("tr");
 
-                        sizeList.innerHTML =
-                            '<div class="destination-row">' +
-                            '<span class="destination-name">No size  </span>' +
-                            '<span class="destination-qty">0</span>' +
-                            '</div>';
+                            const name = document.createElement("td");
+                            name.textContent = String(size.size ?? "-");
 
-                    }
-                    else{
+                            const quantity = document.createElement("td");
+                            quantity.textContent = formatNumber(size.quantity);
 
-                        sizes.forEach(
-                            size => {
-
-                                const sizeRow =
-                                    document.createElement(
-                                        "div"
-                                    );
-
-                                sizeRow.className =
-                                    "destination-row";
-
-
-                                const name =
-                                    document.createElement(
-                                        "span"
-                                    );
-
-                                name.className =
-                                    "destination-name";
-
-                                name.textContent =
-                                    String(
-                                        size.size ?? "-"
-                                    );
-
-
-                                const quantity =
-                                    document.createElement(
-                                        "span"
-                                    );
-
-                                quantity.className =
-                                    "destination-qty";
-
-                                quantity.textContent =
-                                    formatNumber(
-                                        size.quantity
-                                    );
-
-
-                                sizeRow.appendChild(
-                                    name
-                                );
-
-                                sizeRow.appendChild(
-                                    quantity
-                                );
-
-
-                                sizeList.appendChild(
-                                    sizeRow
-                                );
-
-                            }
-                        );
-
+                            sizeRow.appendChild(name);
+                            sizeRow.appendChild(quantity);
+                            sizeBody.appendChild(sizeRow);
+                        });
                     }
 
-
-                    destinationDetails.appendChild(
-                        sizeList
-                    );
+                    sizeTable.appendChild(sizeBody);
+                    sizeList.appendChild(sizeTable);
+                    destinationDetails.appendChild(sizeList);
 
                     partyDetails.appendChild(
                         destinationDetails
